@@ -3,8 +3,6 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-// @ts-ignore
-import confetti from "canvas-confetti";
 import invite from "../../assets/images/invitationnew.jpg";
 import {
   Great_Vibes,
@@ -36,61 +34,76 @@ export default function RsvpSuccessPage() {
   const [profile, setProfile] = useState<KcProfile | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  // Read kc_profile from cookie on the client
+  // Read kc_profile cookie on the client
   useEffect(() => {
-    const match = document.cookie.match(/(?:^|; )kc_profile=([^;]*)/);
-
-    if (!match) {
-      setLoaded(true);
-      return;
-    }
-
     try {
+      const match = document.cookie.match(/(?:^|; )kc_profile=([^;]*)/);
+      if (!match) {
+        setLoaded(true);
+        return;
+      }
+
       const decoded = decodeURIComponent(match[1]);
       const parsed = JSON.parse(decoded);
       setProfile(parsed);
     } catch (err) {
-      console.error("Failed to parse kc_profile cookie", err);
+      console.error("Failed to read kc_profile cookie", err);
       setProfile(null);
     } finally {
       setLoaded(true);
     }
   }, []);
 
-  // Confetti effect
+  // Confetti effect (dynamic import to avoid SSR issues)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const canvas = document.getElementById(
-      "sparkles-canvas"
-    ) as HTMLCanvasElement | null;
-    if (!canvas) return;
+    let cancelled = false;
+    let intervalId: number | undefined;
 
-    const myConfetti = confetti.create(canvas, {
-      resize: true,
-      useWorker: true,
-    });
+    (async () => {
+      try {
+        const mod = await import("canvas-confetti");
+        if (cancelled) return;
 
-    const interval = window.setInterval(() => {
-      for (let i = 0; i < 3; i++) {
-        myConfetti({
-          particleCount: 6,
-          spread: 80,
-          startVelocity: 25,
-          gravity: 0.9,
-          scalar: 0.7,
-          ticks: 200,
-          colors: ["#ffffff", "#fef9c3", "#facc15", "#eab308"],
-          origin: {
-            x: Math.random(),
-            y: -0.1,
-          },
+        const confetti = mod.default || mod;
+        const canvas = document.getElementById(
+          "sparkles-canvas"
+        ) as HTMLCanvasElement | null;
+        if (!canvas) return;
+
+        const myConfetti = confetti.create(canvas, {
+          resize: true,
+          useWorker: true,
         });
+
+        intervalId = window.setInterval(() => {
+          for (let i = 0; i < 3; i++) {
+            myConfetti({
+              particleCount: 6,
+              spread: 80,
+              startVelocity: 25,
+              gravity: 0.9,
+              scalar: 0.7,
+              ticks: 200,
+              colors: ["#ffffff", "#fef9c3", "#facc15", "#eab308"],
+              origin: {
+                x: Math.random(),
+                y: -0.1,
+              },
+            });
+          }
+        }, 500);
+      } catch (err) {
+        console.error("Error loading canvas-confetti", err);
       }
-    }, 500);
+    })();
 
     return () => {
-      window.clearInterval(interval);
+      cancelled = true;
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
+      }
     };
   }, []);
 
