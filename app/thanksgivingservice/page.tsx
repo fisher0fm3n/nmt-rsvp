@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect } from "react";
+// @ts-ignore
 import confetti from "canvas-confetti";
 import { KingsChatSignIn } from "../auth/components/KingschatSignIn";
 import invite from "../assets/images/invitation.jpg";
