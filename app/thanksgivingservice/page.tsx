@@ -5,7 +5,7 @@ import { useEffect } from "react";
 // @ts-ignore
 import confetti from "canvas-confetti";
 import { KingsChatSignIn } from "../auth/components/KingschatSignIn";
-import invite from "../assets/images/invitation.jpg";
+import invite from "../assets/images/invitationnew.jpg";
 import { Great_Vibes, Cormorant_Garamond, Poppins, Kings } from "next/font/google";
 
 // Script font for the main title
