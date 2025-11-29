@@ -40,19 +40,144 @@ type ApiResponse = {
   data?: Entry[];
 };
 
+const SESSION_KEY = "rsvp_admin_session"; // { username, password }
+
 export default function AdminRsvpPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(true); // restoring session on first load
 
+  const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
 
   const isAuthed = entries !== null;
 
-  // Confetti effect ONLY on the login screen
+  // ---- Shared login + fetch helper ----
+  const loginAndFetch = async (u: string, p: string) => {
+    setError(null);
+    setApiMessage(null);
+
+    const trimmedUser = u.trim();
+    const trimmedPass = p.trim();
+
+    if (!trimmedUser || !trimmedPass) {
+      setError("Please enter both username and password.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await fetch(
+        "https://pcdl.co/api/nmt/pka-thanksgivingservice/all",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key":
+              "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
+          },
+          body: JSON.stringify({
+            username: trimmedUser,
+            password: trimmedPass,
+          }),
+          cache: "no-store",
+        }
+      );
+
+      if (!res.ok) {
+        setError(`Request failed with status ${res.status}`);
+        return;
+      }
+
+      const json: ApiResponse = await res.json();
+      setApiMessage(json.message ?? null);
+
+      if (!json.status) {
+        setError(json.message || "Authentication failed.");
+        return;
+      }
+
+      if (!json.data || !Array.isArray(json.data)) {
+        setError("No data returned from API.");
+        return;
+      }
+
+      // ✅ Success: store entries & persist session
+      setEntries(json.data);
+
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(
+            SESSION_KEY,
+            JSON.stringify({
+              username: trimmedUser,
+              password: trimmedPass,
+            })
+          );
+        } catch (storageErr) {
+          console.warn("Failed to persist admin session", storageErr);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching RSVP entries:", err);
+      setError("Network error while fetching RSVP entries.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---- Handle form submit ----
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    await loginAndFetch(username, password);
+  };
+
+  // ---- Restore session on first load (keep user logged in) ----
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    (async () => {
+      try {
+        const raw = window.localStorage.getItem(SESSION_KEY);
+        if (!raw) {
+          setRestoring(false);
+          return;
+        }
+
+        let parsed: { username?: string; password?: string } = {};
+        try {
+          parsed = JSON.parse(raw);
+        } catch (err) {
+          console.warn("Failed to parse stored admin session", err);
+          window.localStorage.removeItem(SESSION_KEY);
+          setRestoring(false);
+          return;
+        }
+
+        if (!parsed.username || !parsed.password) {
+          window.localStorage.removeItem(SESSION_KEY);
+          setRestoring(false);
+          return;
+        }
+
+        // Hydrate fields for convenience
+        setUsername(parsed.username);
+        setPassword(parsed.password);
+
+        // Try to re-login silently
+        await loginAndFetch(parsed.username, parsed.password);
+      } finally {
+        setRestoring(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ---- Confetti effect ONLY on the login screen ----
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (isAuthed) return; // don't run confetti on the table view
@@ -90,59 +215,49 @@ export default function AdminRsvpPage() {
     };
   }, [isAuthed]);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  // ---- Logout (clear session + state) ----
+  const handleLogout = () => {
+    setEntries(null);
     setApiMessage(null);
+    setError(null);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(SESSION_KEY);
+    }
+  };
 
-    if (!username || !password) {
-      setError("Please enter both username and password.");
+  // ---- Refresh button handler (re-fetch using stored session) ----
+  const handleRefresh = async () => {
+    if (typeof window === "undefined") return;
+
+    const raw = window.localStorage.getItem(SESSION_KEY);
+    if (!raw) {
+      setError("No saved admin session found. Please log in again.");
       return;
     }
 
     try {
-      setLoading(true);
-
-      const res = await fetch(
-        "https://pcdl.co/api/nmt/pka-thanksgivingservice/all",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key":
-              "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
-          },
-          body: JSON.stringify({ username, password }),
-          cache: "no-store",
-        }
-      );
-
-      if (!res.ok) {
-        setError(`Request failed with status ${res.status}`);
+      const parsed: { username?: string; password?: string } = JSON.parse(raw);
+      if (!parsed.username || !parsed.password) {
+        setError("Saved admin session is invalid. Please log in again.");
+        window.localStorage.removeItem(SESSION_KEY);
         return;
       }
 
-      const json: ApiResponse = await res.json();
-      setApiMessage(json.message ?? null);
-
-      if (!json.status) {
-        setError(json.message || "Authentication failed.");
-        return;
-      }
-
-      if (!json.data || !Array.isArray(json.data)) {
-        setError("No data returned from API.");
-        return;
-      }
-
-      setEntries(json.data);
+      await loginAndFetch(parsed.username, parsed.password);
     } catch (err) {
-      console.error("Error fetching RSVP entries:", err);
-      setError("Network error while fetching RSVP entries.");
-    } finally {
-      setLoading(false);
+      console.error("Failed to refresh using saved session", err);
+      setError("Could not refresh entries. Please log in again.");
     }
   };
+
+  // While restoring session and not yet decided, show a simple loading state
+  if (restoring && !isAuthed) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900 text-slate-100">
+        <p>Loading admin session…</p>
+      </main>
+    );
+  }
 
   // 🔹 VIEW 1: LOGIN + SIDE BANNER (not authed)
   if (!isAuthed) {
@@ -256,14 +371,13 @@ export default function AdminRsvpPage() {
   // 🔹 VIEW 2: FULL-SCREEN TABLE, GRADIENT BG, TOP BLURRED BANNER
   return (
     <main className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900 px-2 sm:px-4 py-4 sm:py-6">
-      {/* Optional: keep sparkles on table view too; remove if you don't want */}
       <canvas
         id="sparkles-canvas"
         className="pointer-events-none fixed inset-0 z-0 w-full"
       />
 
       <div className="relative z-10 max-w-6xl mx-auto space-y-6 sm:space-y-8">
-        {/* Full-width blurred banner at top */}
+        {/* Top banner */}
         <section className="relative w-full rounded-3xl overflow-hidden border border-slate-700/60 shadow-2xl bg-slate-950/60">
           <div className="relative h-40 sm:h-52 md:h-64">
             <Image
@@ -277,7 +391,7 @@ export default function AdminRsvpPage() {
 
             <div className="relative z-10 flex flex-col items-start justify-end h-full px-4 sm:px-6 md:px-8 py-4 sm:py-6">
               <p
-                className={`${cormorant.className} text-[10px] sm:text-xs tracking-[0.25em] uppercase text-slate-300`}
+                className={`${cormorant.className} font-bold text-sm mb-4 tracking-[0.25em] uppercase text-slate-300`}
               >
                 Highly Esteemed Pastor Kayode Adesina
               </p>
@@ -286,12 +400,32 @@ export default function AdminRsvpPage() {
               >
                 Thanksgiving Service
               </h1>
-              <h2
-                className={`${cormorant.className} text-lg sm:text-2xl md:text-3xl text-emerald-300 mt-1`}
-              >
-                RSVP Admin Dashboard
-              </h2>
-              <p className="mt-2 text-[11px] sm:text-xs text-slate-200 max-w-md">
+
+              <div className="mt-1 w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <h2
+                  className={`${cormorant.className} text-lg sm:text-2xl md:text-3xl text-emerald-300`}
+                >
+                  RSVP Admin Dashboard
+                </h2>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleRefresh}
+                    disabled={loading}
+                    className={`${poppins.className} text-sm cursor-pointer px-3 py-1 rounded-md bg-slate-200/90 hover:bg-white text-slate-900 font-semibold shadow disabled:opacity-60 disabled:cursor-not-allowed`}
+                  >
+                    {loading ? "Refreshing…" : "Refresh"}
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className={`${poppins.className} text-sm cursor-pointer px-3 py-1 rounded-md bg-red-500/80 hover:bg-red-400 text-slate-900 font-semibold shadow`}
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+
+              <p className="mt-2 text-[1rem] text-slate-200 max-w-md">
                 View and manage all registered attendees for the Thanksgiving Service.
               </p>
             </div>
@@ -303,24 +437,29 @@ export default function AdminRsvpPage() {
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
             <div>
               <h3
-                className={`${cormorant.className} text-xl sm:text-2xl text-amber-200 font-semibold`}
+                className={`${cormorant.className} text-xl sm:text-[2rem] text-amber-200 font-semibold`}
               >
                 RSVP Entries
               </h3>
               {apiMessage && (
-                <p className="text-xs sm:text-sm text-slate-200 mt-1">
+                <p className="text-xs sm:text-[1rem] text-slate-200 mt-1">
                   {apiMessage}
                 </p>
               )}
+              {error && (
+                <p className="text-xs text-red-400 mt-1">
+                  {error}
+                </p>
+              )}
             </div>
-            <p className="text-[11px] sm:text-xs text-slate-300">
+            <p className="text-sm cursor-pointer text-slate-300">
               Showing {entries?.length ?? 0} entries
             </p>
           </div>
 
           <div className="w-full overflow-x-auto rounded-xl border border-slate-700/60 bg-slate-950/70">
-            <table className="min-w-full text-left text-xs sm:text-sm text-slate-100">
-              <thead className="bg-slate-950/90">
+            <table className="min-w-full text-left text-sm sm:text-md text-slate-100">
+              <thead className="bg-slate-950/90 text-md">
                 <tr>
                   <th className="px-3 py-2 sm:px-4 sm:py-3 font-semibold">
                     Name
@@ -333,7 +472,7 @@ export default function AdminRsvpPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="text-[1rem]">
                 {entries!.map((entry, idx) => (
                   <tr
                     key={`${entry.username}-${idx}`}
@@ -355,10 +494,6 @@ export default function AdminRsvpPage() {
               </tbody>
             </table>
           </div>
-
-          <p className="mt-1 text-[11px] sm:text-xs text-slate-300">
-            On smaller screens, drag left/right to scroll the table.
-          </p>
         </section>
       </div>
     </main>
