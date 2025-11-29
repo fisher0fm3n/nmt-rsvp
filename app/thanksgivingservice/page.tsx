@@ -81,7 +81,7 @@ export default function RsvpPage() {
       />
 
       {/* Content card */}
-      <div className="text-center relative z-10 w-full max-w-4xl bg-slate-900/60 border border-slate-700/60 rounded-3xl shadow-2xl backdrop-blur-md p-4 sm:p-6 lg:p-8">
+      <div className="text-center relative z-10 w-full max-w-5xl bg-slate-900/60 border border-slate-700/60 rounded-3xl shadow-2xl backdrop-blur-md p-4 sm:p-6 lg:p-8">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-center">
           {/* Invitation Image */}
           <div className="relative w-full lg:w-1/2">
