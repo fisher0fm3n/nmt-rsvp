@@ -1,6 +1,9 @@
 // app/auth/kingschat/callback/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
+const BASE_ORIGIN =
+  process.env.NEXT_PUBLIC_BASE_URL || "https://nmt-rsvp.netlify.app";
+
 export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") || "";
@@ -17,7 +20,6 @@ export async function POST(req: NextRequest) {
       accessToken = (form.get("accessToken") as string) ?? null;
       refreshToken = (form.get("refreshToken") as string) ?? null;
     } else {
-      // fallback: try formData anyway
       const form = await req.formData().catch(() => null);
       if (form) {
         accessToken = (form.get("accessToken") as string) ?? null;
@@ -32,32 +34,65 @@ export async function POST(req: NextRequest) {
 
     if (!accessToken) {
       console.error("No accessToken in POST body");
-      return new NextResponse(
-        "Missing accessToken in KingsChat callback body",
-        { status: 400 }
-      );
+      return NextResponse.redirect(`${BASE_ORIGIN}/rsvp/error`);
     }
 
-    // OPTIONAL: call KingsChat profile here if you want
-    // const kcResp = await fetch(
-    //   "https://connect.kingsch.at/developer/api/profile",
-    //   {
-    //     method: "GET",
-    //     headers: {
-    //       Accept: "application/json",
-    //       Authorization: `Bearer ${accessToken}`,
-    //     },
-    //   }
-    // );
-    // const profile = await kcResp.json();
-    // console.log("KingsChat profile:", profile);
-
-    // Set cookies
-    const res = NextResponse.redirect(
-      new URL("/auth", req.url), // will hit page.tsx as GET
-      { status: 303 }
+    // 1) Fetch KingsChat profile
+    const kcResp = await fetch(
+      "https://connect.kingsch.at/developer/api/profile",
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: "no-store",
+      }
     );
 
+    if (!kcResp.ok) {
+      console.error("KingsChat profile request failed:", kcResp.status);
+      return NextResponse.redirect(`${BASE_ORIGIN}/rsvp/error`);
+    }
+
+    const profileJson = await kcResp.json();
+    const kcProfile = profileJson?.profile;
+
+    if (!kcProfile) {
+      console.error("No profile.profile in KingsChat response", profileJson);
+      return NextResponse.redirect(`${BASE_ORIGIN}/rsvp/error`);
+    }
+
+    // 2) Submit RSVP to PCDL API
+    const submitResp = await fetch(
+      "https://pcdl.co/api/nmt/pka-thanksgivingservice",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key":
+            "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
+        },
+        body: JSON.stringify({
+          id: kcProfile.id,
+          name: kcProfile.name,
+          username: kcProfile.username,
+          email: kcProfile.email,
+        }),
+        cache: "no-store",
+      }
+    );
+
+    if (!submitResp.ok) {
+      console.error("PCDL RSVP submission failed:", submitResp.status);
+      return NextResponse.redirect(`${BASE_ORIGIN}/rsvp/error`);
+    }
+
+    // 3) Build redirect to success page
+    const redirectUrl = `${BASE_ORIGIN}/rsvp/success`;
+    const res = NextResponse.redirect(redirectUrl);
+
+    // 4) Set tokens (optional, if you still need them)
     res.cookies.set("kc_access_token", accessToken, {
       httpOnly: true,
       secure: true,
@@ -76,9 +111,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // 5) 👇 Set *non-httpOnly* cookie for profile (readable on client)
+    const safeProfile = {
+      name: kcProfile.name ?? null,
+      avatar: kcProfile.avatar ?? null,
+    };
+
+    res.cookies.set("kc_profile", encodeURIComponent(JSON.stringify(safeProfile)), {
+      httpOnly: false,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 10, // 10 minutes
+    });
+
     return res;
   } catch (err) {
     console.error("Error in KingsChat callback route:", err);
-    return new NextResponse("Internal server error", { status: 500 });
+    return NextResponse.redirect(`${BASE_ORIGIN}/rsvp/error`);
   }
 }
