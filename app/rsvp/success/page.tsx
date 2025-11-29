@@ -1,17 +1,14 @@
 // app/rsvp/success/page.tsx
 "use client";
 
+import React, { useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
-import { useEffect } from "react";
-// @ts-ignore
-import confetti from "canvas-confetti";
 import invite from "../../assets/images/invitationnew.jpg";
 import {
   Great_Vibes,
   Cormorant_Garamond,
   Poppins,
 } from "next/font/google";
-import { useSearchParams } from "next/navigation";
 
 const greatVibes = Great_Vibes({
   subsets: ["latin"],
@@ -28,46 +25,211 @@ const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
 });
 
-export default function RsvpSuccessPage() {
-  const searchParams = useSearchParams();
-  const name = searchParams.get("name") || "Beloved Guest";
-  const avatar = searchParams.get("avatar");
+type KcProfile = {
+  name?: string;
+  avatar?: string;
+};
 
+/**
+ * Error boundary so any runtime error in this page
+ * renders a friendly fallback instead of a hard 500.
+ */
+class RsvpSuccessErrorBoundary extends React.Component<
+  { children: ReactNode },
+  { hasError: boolean; message?: string }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, message: undefined };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, message: error.message ?? "Unknown error" };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Error in /rsvp/success page:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 px-4">
+          <div className="max-w-md w-full bg-slate-900/80 border border-red-500/40 rounded-2xl p-6 shadow-xl space-y-4 text-center">
+            <h1 className="text-xl font-semibold text-red-300">
+              Something went wrong
+            </h1>
+            <p className="text-sm text-slate-200 mb-2">
+              We hit an unexpected error while loading your RSVP success page.
+            </p>
+            {this.state.message && (
+              <p className="text-xs text-slate-400 break-words">
+                <span className="font-semibold">Details:</span>{" "}
+                {this.state.message}
+              </p>
+            )}
+            <p className="text-xs text-slate-500 mt-2">
+              You can close this page or try the RSVP process again.
+            </p>
+          </div>
+        </main>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+/**
+ * Outer default export: wraps the actual content in the error boundary.
+ */
+export default function RsvpSuccessPage() {
+  return (
+    <RsvpSuccessErrorBoundary>
+      <RsvpSuccessContent />
+    </RsvpSuccessErrorBoundary>
+  );
+}
+
+/**
+ * Actual page logic + UI lives here.
+ */
+function RsvpSuccessContent() {
+  const [profile, setProfile] = useState<KcProfile | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [softError, setSoftError] = useState<string | null>(null);
+
+  // Read kc_profile from cookie on the client, with error handling
+  useEffect(() => {
+    try {
+      const match = document.cookie.match(/(?:^|; )kc_profile=([^;]*)/);
+
+      if (!match) {
+        setLoaded(true);
+        return;
+      }
+
+      const raw = match[1];
+
+      let decoded = raw;
+      try {
+        decoded = decodeURIComponent(raw);
+      } catch (decodeErr) {
+        console.warn("Failed to decode kc_profile cookie, using raw value", decodeErr);
+      }
+
+      const parsed = JSON.parse(decoded);
+      setProfile(parsed);
+    } catch (err) {
+      console.error("Failed to parse kc_profile cookie", err);
+      setSoftError("We ran into a problem reading your RSVP details.");
+      setProfile(null);
+    } finally {
+      setLoaded(true);
+    }
+  }, []);
+
+  // Confetti effect with dynamic import + error handling
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (softError) return; // don't bother with confetti if there was an error
 
-    const canvas = document.getElementById(
-      "sparkles-canvas"
-    ) as HTMLCanvasElement | null;
-    if (!canvas) return;
+    let cancelled = false;
+    let intervalId: number | undefined;
 
-    const myConfetti = confetti.create(canvas, {
-      resize: true,
-      useWorker: true,
-    });
+    (async () => {
+      try {
+        // @ts-ignore
+        const mod = await import("canvas-confetti");
+        if (cancelled) return;
 
-    const interval = window.setInterval(() => {
-      for (let i = 0; i < 3; i++) {
-        myConfetti({
-          particleCount: 6,
-          spread: 80,
-          startVelocity: 25,
-          gravity: 0.9,
-          scalar: 0.7,
-          ticks: 200,
-          colors: ["#ffffff", "#fef9c3", "#facc15", "#eab308"],
-          origin: {
-            x: Math.random(),
-            y: -0.1,
-          },
+        const confetti = (mod as any).default || mod;
+        const canvas = document.getElementById(
+          "sparkles-canvas"
+        ) as HTMLCanvasElement | null;
+
+        if (!canvas || !confetti || typeof confetti.create !== "function") {
+          console.warn("Confetti not initialized: canvas or API missing.");
+          return;
+        }
+
+        const myConfetti = confetti.create(canvas, {
+          resize: true,
+          useWorker: true,
         });
+
+        intervalId = window.setInterval(() => {
+          for (let i = 0; i < 3; i++) {
+            myConfetti({
+              particleCount: 6,
+              spread: 80,
+              startVelocity: 25,
+              gravity: 0.9,
+              scalar: 0.7,
+              ticks: 200,
+              colors: ["#ffffff", "#fef9c3", "#facc15", "#eab308"],
+              origin: {
+                x: Math.random(),
+                y: -0.1,
+              },
+            });
+          }
+        }, 500);
+      } catch (confettiErr) {
+        console.error("Error loading or running canvas-confetti", confettiErr);
+        setSoftError(
+          "A visual effect failed to load, but your RSVP is still valid."
+        );
       }
-    }, 500);
+    })();
 
     return () => {
-      window.clearInterval(interval);
+      cancelled = true;
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
+      }
     };
-  }, []);
+  }, [softError]);
+
+  // Loading state
+  if (!loaded && !softError) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-200">
+        <p>Loading your RSVP details…</p>
+      </main>
+    );
+  }
+
+  // Soft error: show friendly message, but not crash
+  if (softError) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 px-4">
+        <div className="max-w-md w-full bg-slate-900/80 border border-amber-400/40 rounded-2xl p-6 shadow-xl space-y-4 text-center">
+          <h1 className="text-xl font-semibold text-amber-300">
+            Your RSVP is recorded
+          </h1>
+          <p className="text-sm text-slate-200">
+            {softError}
+          </p>
+          <p className="text-xs text-slate-500 mt-2">
+            You may still safely close this page.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  // No error, but no profile found
+  if (!profile) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-200">
+        <p>We couldn&apos;t find your RSVP details. Please try again.</p>
+      </main>
+    );
+  }
+
+  const name = profile.name || "Beloved Guest";
+  const avatar = profile.avatar;
 
   return (
     <main className="relative min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900">
