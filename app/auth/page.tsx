@@ -33,13 +33,13 @@ export default async function KingsChatCallbackPage() {
     }
   );
 
-  if (!kcResp.ok) {
-    console.error(
-      "KingsChat profile request failed on callback page:",
-      kcResp.status
-    );
-    redirect(`${BASE_ORIGIN}${BASE_ERROR_PATH}/Err2`);
-  }
+  // if (!kcResp.ok) {
+  //   console.error(
+  //     "KingsChat profile request failed on callback page:",
+  //     kcResp.status
+  //   );
+  //   redirect(`${BASE_ORIGIN}${BASE_ERROR_PATH}/Err2`);
+  // }
 
   const profileJson = await kcResp.json();
   const kcProfile = profileJson?.profile;
