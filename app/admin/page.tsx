@@ -6,11 +6,7 @@ import Image from "next/image";
 // @ts-ignore
 import confetti from "canvas-confetti";
 import invite from "../assets/images/invitationnew.jpg";
-import {
-  Great_Vibes,
-  Cormorant_Garamond,
-  Poppins,
-} from "next/font/google";
+import { Great_Vibes, Cormorant_Garamond, Poppins } from "next/font/google";
 
 const greatVibes = Great_Vibes({
   subsets: ["latin"],
@@ -27,10 +23,13 @@ const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
 });
 
+// Updated to match new API shape
 type Entry = {
   name: string;
   username: string;
-  email: string;
+  email?: string | null;
+  attendance?: string | null; // "yes" | "no" | null
+  submittedAt?: string; // ISO string
 };
 
 type ApiResponse = {
@@ -52,8 +51,31 @@ export default function AdminRsvpPage() {
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
 
   const isAuthed = entries !== null;
+
+  const formatAttendance = (value?: string | null) => {
+    if (!value) return "—";
+    return value.toLowerCase() === "yes"
+      ? "Yes"
+      : value.toLowerCase() === "no"
+      ? "No"
+      : value;
+  };
+
+  const formatSubmittedAt = (value?: string) => {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString("en-NG", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   // ---- Shared login + fetch helper ----
   const loginAndFetch = async (u: string, p: string) => {
@@ -106,8 +128,11 @@ export default function AdminRsvpPage() {
         return;
       }
 
-      // ✅ Success: store entries & persist session
+      // ✅ Success: store entries & count & persist session
       setEntries(json.data);
+      setTotalCount(
+        typeof json.count === "number" ? json.count : json.data.length
+      );
 
       if (typeof window !== "undefined") {
         try {
@@ -220,6 +245,7 @@ export default function AdminRsvpPage() {
     setEntries(null);
     setApiMessage(null);
     setError(null);
+    setTotalCount(null);
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(SESSION_KEY);
     }
@@ -426,7 +452,8 @@ export default function AdminRsvpPage() {
               </div>
 
               <p className="mt-2 text-[1rem] text-slate-200 max-w-md">
-                View and manage all registered attendees for the Thanksgiving Service.
+                View and manage all registered attendees for the Thanksgiving
+                Service.
               </p>
             </div>
           </div>
@@ -446,14 +473,11 @@ export default function AdminRsvpPage() {
                   {apiMessage}
                 </p>
               )}
-              {error && (
-                <p className="text-xs text-red-400 mt-1">
-                  {error}
-                </p>
-              )}
+              {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
             </div>
-            <p className="text-sm cursor-pointer text-slate-300">
-              Showing {entries?.length ?? 0} entries
+            <p className="text-sm text-slate-300">
+              Showing {entries?.length ?? 0} of{" "}
+              {totalCount ?? entries?.length ?? 0} entries
             </p>
           </div>
 
@@ -469,6 +493,12 @@ export default function AdminRsvpPage() {
                   </th>
                   <th className="px-3 py-2 sm:px-4 sm:py-3 font-semibold">
                     Email
+                  </th>
+                  <th className="px-3 py-2 sm:px-4 sm:py-3 font-semibold">
+                    Attendance
+                  </th>
+                  <th className="px-3 py-2 sm:px-4 sm:py-3 font-semibold whitespace-nowrap">
+                    Submitted At
                   </th>
                 </tr>
               </thead>
@@ -487,7 +517,13 @@ export default function AdminRsvpPage() {
                       {entry.username}
                     </td>
                     <td className="px-3 py-2 sm:px-4 sm:py-3 whitespace-nowrap">
-                      {entry.email}
+                      {entry.email ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 sm:px-4 sm:py-3 whitespace-nowrap">
+                      {formatAttendance(entry.attendance)}
+                    </td>
+                    <td className="px-3 py-2 sm:px-4 sm:py-3 whitespace-nowrap">
+                      {formatSubmittedAt(entry.submittedAt)}
                     </td>
                   </tr>
                 ))}
