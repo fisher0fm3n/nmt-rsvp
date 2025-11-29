@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 // Use an env var if you want, otherwise fall back to your main domain
 const BASE_URL =
-  process.env.NEXT_PUBLIC_BASE_URL || "https://nmt-rsvp.netlify.app";
+  process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
 export async function POST(req: NextRequest) {
   try {

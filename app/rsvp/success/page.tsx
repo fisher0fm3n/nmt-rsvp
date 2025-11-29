@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 // @ts-ignore
 import confetti from "canvas-confetti";
 import invite from "../../assets/images/invitationnew.jpg";
@@ -11,7 +11,6 @@ import {
   Cormorant_Garamond,
   Poppins,
 } from "next/font/google";
-import { useSearchParams } from "next/navigation";
 
 const greatVibes = Great_Vibes({
   subsets: ["latin"],
@@ -28,11 +27,37 @@ const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
 });
 
-export default function RsvpSuccessPage() {
-  const searchParams = useSearchParams();
-  const name = searchParams.get("name") || "Beloved Guest";
-  const avatar = searchParams.get("avatar");
+type KcProfile = {
+  name?: string;
+  avatar?: string;
+};
 
+export default function RsvpSuccessPage() {
+  const [profile, setProfile] = useState<KcProfile | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  // Read kc_profile from cookie on the client
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|; )kc_profile=([^;]*)/);
+
+    if (!match) {
+      setLoaded(true);
+      return;
+    }
+
+    try {
+      const decoded = decodeURIComponent(match[1]);
+      const parsed = JSON.parse(decoded);
+      setProfile(parsed);
+    } catch (err) {
+      console.error("Failed to parse kc_profile cookie", err);
+      setProfile(null);
+    } finally {
+      setLoaded(true);
+    }
+  }, []);
+
+  // Confetti effect
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -68,6 +93,25 @@ export default function RsvpSuccessPage() {
       window.clearInterval(interval);
     };
   }, []);
+
+  if (!loaded) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-200">
+        <p>Loading your RSVP details…</p>
+      </main>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-200">
+        <p>We couldn&apos;t find your RSVP details. Please try again.</p>
+      </main>
+    );
+  }
+
+  const name = profile.name || "Beloved Guest";
+  const avatar = profile.avatar;
 
   return (
     <main className="relative min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900">
