@@ -87,14 +87,17 @@ export default function RsvpPage() {
     setAttendance(value);
 
     if (typeof window !== "undefined") {
-      // Store in localStorage
+      // 1) Store in localStorage for client-side use
       window.localStorage.setItem("attendanceResponse", value);
 
-      // Also store in a cookie so the server callback can read it
+      // 2) Also store in a cookie so the server callback can read it
       const maxAge = 60 * 60 * 24 * 30; // 30 days
+      const isSecure = window.location.protocol === "https:";
       document.cookie = `attendanceResponse=${encodeURIComponent(
         value
-      )}; path=/; max-age=${maxAge}`;
+      )}; path=/; max-age=${maxAge}; SameSite=Lax${
+        isSecure ? "; Secure" : ""
+      }`;
     }
   };
 
