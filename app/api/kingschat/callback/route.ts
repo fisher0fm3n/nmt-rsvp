@@ -1,6 +1,9 @@
 // app/auth/kingschat/callback/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
+const BASE_ORIGIN =
+  process.env.NEXT_PUBLIC_BASE_URL || "https://nmt-rsvp.netlify.app";
+
 export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") || "";
@@ -38,25 +41,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // OPTIONAL: call KingsChat profile here if you want
-    // const kcResp = await fetch(
-    //   "https://connect.kingsch.at/developer/api/profile",
-    //   {
-    //     method: "GET",
-    //     headers: {
-    //       Accept: "application/json",
-    //       Authorization: `Bearer ${accessToken}`,
-    //     },
-    //   }
-    // );
-    // const profile = await kcResp.json();
-    // console.log("KingsChat profile:", profile);
+    // Build absolute redirect URL using canonical origin
+    const redirectUrl = `${BASE_ORIGIN.replace(/\/$/, "")}/auth`;
 
-    // Set cookies
-    const res = NextResponse.redirect(
-      new URL("/auth", req.url), // will hit page.tsx as GET
-      { status: 303 }
-    );
+    const res = NextResponse.redirect(redirectUrl, { status: 303 });
 
     res.cookies.set("kc_access_token", accessToken, {
       httpOnly: true,
