@@ -1,6 +1,10 @@
 // app/auth/kingschat/callback/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
+// Use an env var if you want, otherwise fall back to your main domain
+const BASE_URL =
+  process.env.NEXT_PUBLIC_BASE_URL || "https://nmt-rsvp.netlify.app";
+
 export async function POST(req: NextRequest) {
   try {
     // 1. Try to get tokens from cookies first
@@ -37,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     if (!accessToken) {
       console.error("No accessToken found (cookies or body)");
-      return NextResponse.redirect(new URL("/rsvp/error", req.url));
+      return NextResponse.redirect(`${BASE_URL}/rsvp/error`);
     }
 
     // 3. Fetch profile from KingsChat
@@ -55,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     if (!kcResp.ok) {
       console.error("KingsChat profile request failed", kcResp.status);
-      return NextResponse.redirect(new URL("/rsvp/error", req.url));
+      return NextResponse.redirect(`${BASE_URL}/rsvp/error`);
     }
 
     const profile = await kcResp.json();
@@ -63,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     if (!kcProfile) {
       console.error("No profile.profile in KingsChat response");
-      return NextResponse.redirect(new URL("/rsvp/error", req.url));
+      return NextResponse.redirect(`${BASE_URL}/rsvp/error`);
     }
 
     // 4. Submit entry to Thanksgiving service API
@@ -88,11 +92,11 @@ export async function POST(req: NextRequest) {
 
     if (!submitResp.ok) {
       console.error("Thanksgiving service submission failed", submitResp.status);
-      return NextResponse.redirect(new URL("/rsvp/error", req.url));
+      return NextResponse.redirect(`${BASE_URL}/rsvp/error`);
     }
 
-    // 5. Build redirect response to success page
-    const res = NextResponse.redirect(new URL("/rsvp/success", req.url));
+    // 5. Build redirect response to success page (always on main domain)
+    const res = NextResponse.redirect(`${BASE_URL}/rsvp/success`);
 
     // Ensure tokens are persisted as cookies on your domain (optional but useful)
     res.cookies.set("kc_access_token", accessToken, {
@@ -130,7 +134,7 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (err) {
     console.error("Error in KingsChat callback route:", err);
-    // On any unexpected error → error page
-    return NextResponse.redirect(new URL("/rsvp/error", req.url));
+    // On any unexpected error → error page on main domain
+    return NextResponse.redirect(`${BASE_URL}/rsvp/error`);
   }
 }
