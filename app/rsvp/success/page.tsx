@@ -301,20 +301,20 @@ function RsvpSuccessContent() {
                 <p
                   className={`${cormorant.className} text-lg text-slate-200 leading-relaxed`}
                 >
-                  Welcome,&nbsp;
+                  Thank you&nbsp;
                   <span className="text-amber-200 font-semibold">
                     {name}
                   </span>
-                  . Your registration has been received.
+                  . Your response has been received.
                 </p>
               </div>
 
-              <p
+              {/* <p
                 className={`${cormorant.className} font-bold text-md text-slate-300 leading-relaxed mt-2`}
               >
                 We look forward to celebrating this special Thanksgiving
                 Service with you.
-              </p>
+              </p> */}
             </div>
 
             <div className="space-y-3">
