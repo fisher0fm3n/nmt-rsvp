@@ -13,12 +13,12 @@ export default async function KingsChatCallbackPage() {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("kc_access_token")?.value ?? null;
 
-  if (!accessToken) {
-    console.error(
-      "KingsChat callback page: no kc_access_token cookie found"
-    );
-    redirect(`${BASE_ORIGIN}${BASE_ERROR_PATH}/Err1`);
-  }
+  // if (!accessToken) {
+  //   console.error(
+  //     "KingsChat callback page: no kc_access_token cookie found"
+  //   );
+  //   redirect(`${BASE_ORIGIN}${BASE_ERROR_PATH}/Err1`);
+  // }
 
   // 1) Fetch KingsChat profile using the access token
   const kcResp = await fetch(
