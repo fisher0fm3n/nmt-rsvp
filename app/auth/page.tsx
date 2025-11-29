@@ -2,6 +2,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+const BASE_ORIGIN =
+  process.env.NEXT_PUBLIC_BASE_URL || "https://nmt-rsvp.netlify.app";
+
 const BASE_SUCCESS_PATH = "/rsvp/success";
 const BASE_ERROR_PATH = "/rsvp/error";
 
@@ -14,7 +17,7 @@ export default async function KingsChatCallbackPage() {
     console.error(
       "KingsChat callback page: no kc_access_token cookie found"
     );
-    redirect(BASE_ERROR_PATH);
+    redirect(`${BASE_ORIGIN}${BASE_ERROR_PATH}`);
   }
 
   // 1) Fetch KingsChat profile using the access token
@@ -35,7 +38,7 @@ export default async function KingsChatCallbackPage() {
       "KingsChat profile request failed on callback page:",
       kcResp.status
     );
-    redirect(BASE_ERROR_PATH);
+    redirect(`${BASE_ORIGIN}${BASE_ERROR_PATH}`);
   }
 
   const profileJson = await kcResp.json();
@@ -46,7 +49,7 @@ export default async function KingsChatCallbackPage() {
       "KingsChat callback page: profile.profile missing in response",
       profileJson
     );
-    redirect(BASE_ERROR_PATH);
+    redirect(`${BASE_ORIGIN}${BASE_ERROR_PATH}`);
   }
 
   // 2) Submit RSVP to PCDL API
@@ -74,7 +77,7 @@ export default async function KingsChatCallbackPage() {
       "PCDL RSVP submission failed on callback page:",
       submitResp.status
     );
-    redirect(BASE_ERROR_PATH);
+    redirect(`${BASE_ORIGIN}${BASE_ERROR_PATH}`);
   }
 
   // 3) Redirect to success page with name + avatar in query params
@@ -85,5 +88,5 @@ export default async function KingsChatCallbackPage() {
   if (name) params.set("name", name);
   if (avatar) params.set("avatar", avatar);
 
-  redirect(`${BASE_SUCCESS_PATH}?${params.toString()}`);
+  redirect(`${BASE_ORIGIN}${BASE_SUCCESS_PATH}?${params.toString()}`);
 }
