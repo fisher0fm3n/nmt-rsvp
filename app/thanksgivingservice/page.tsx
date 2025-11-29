@@ -87,7 +87,14 @@ export default function RsvpPage() {
     setAttendance(value);
 
     if (typeof window !== "undefined") {
+      // Store in localStorage
       window.localStorage.setItem("attendanceResponse", value);
+
+      // Also store in a cookie so the server callback can read it
+      const maxAge = 60 * 60 * 24 * 30; // 30 days
+      document.cookie = `attendanceResponse=${encodeURIComponent(
+        value
+      )}; path=/; max-age=${maxAge}`;
     }
   };
 
