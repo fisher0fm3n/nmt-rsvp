@@ -4,19 +4,15 @@ import { NextRequest, NextResponse } from "next/server";
 const BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL || "https://nmt-rsvp.netlify.app";
 
-function redirectWithReason(reason: string) {
-  const url = new URL(`${BASE_URL}/rsvp/error`);
-  url.searchParams.set("reason", reason);
-  return NextResponse.redirect(url.toString());
-}
-
 export async function POST(req: NextRequest) {
   try {
+    // 1. Try to get tokens from cookies first
     let accessToken: string | null =
       req.cookies.get("kc_access_token")?.value ?? null;
     let refreshToken: string | null =
       req.cookies.get("kc_refresh_token")?.value ?? null;
 
+    // 2. If no access token in cookies, try to read it from the POST body (JSON or form-data)
     if (!accessToken) {
       const contentType = req.headers.get("content-type") || "";
 
@@ -29,6 +25,7 @@ export async function POST(req: NextRequest) {
         accessToken = (form.get("accessToken") as string) ?? null;
         refreshToken = (form.get("refreshToken") as string) ?? null;
       } else {
+        // fallback: try formData anyway
         const form = await req.formData().catch(() => null);
         if (form) {
           accessToken = (form.get("accessToken") as string) ?? null;
@@ -43,9 +40,10 @@ export async function POST(req: NextRequest) {
 
     if (!accessToken) {
       console.error("No accessToken found (cookies or body)");
-      return redirectWithReason("NO_ACCESS_TOKEN");
+      return NextResponse.redirect(`${BASE_URL}/rsvp/error`);
     }
 
+    // 3. Fetch profile from KingsChat
     const kcResp = await fetch(
       "https://connect.kingsch.at/developer/api/profile",
       {
@@ -60,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     if (!kcResp.ok) {
       console.error("KingsChat profile request failed", kcResp.status);
-      return redirectWithReason("PROFILE_REQUEST_FAILED");
+      return NextResponse.redirect(`${BASE_URL}/rsvp/error`);
     }
 
     const profile = await kcResp.json();
@@ -68,9 +66,10 @@ export async function POST(req: NextRequest) {
 
     if (!kcProfile) {
       console.error("No profile.profile in KingsChat response");
-      return redirectWithReason("PROFILE_MISSING");
+      return NextResponse.redirect(`${BASE_URL}/rsvp/error`);
     }
 
+    // 4. Submit entry to Thanksgiving service API
     const submitResp = await fetch(
       "https://pcdl.co/api/nmt/pka-thanksgivingservice",
       {
@@ -91,21 +90,28 @@ export async function POST(req: NextRequest) {
     );
 
     if (!submitResp.ok) {
-      console.error(
-        "Thanksgiving service submission failed",
-        submitResp.status
-      );
-      return redirectWithReason("RSVP_SUBMIT_FAILED");
+      console.error("Thanksgiving service submission failed", submitResp.status);
+      return NextResponse.redirect(`${BASE_URL}/rsvp/error`);
     }
 
-    const res = NextResponse.redirect(`${BASE_URL}/rsvp/success`);
+    // 5. Redirect to success WITH name + avatar in query params
+    const successUrl = new URL(`${BASE_URL}/rsvp/success`);
+    if (kcProfile.name) {
+      successUrl.searchParams.set("name", kcProfile.name);
+    }
+    if (kcProfile.avatar) {
+      successUrl.searchParams.set("avatar", kcProfile.avatar);
+    }
 
+    const res = NextResponse.redirect(successUrl.toString());
+
+    // (Optional) still keep tokens as httpOnly cookies if you want
     res.cookies.set("kc_access_token", accessToken, {
       httpOnly: true,
       secure: true,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60,
+      maxAge: 60 * 60, // 1 hour
     });
 
     if (refreshToken) {
@@ -114,27 +120,16 @@ export async function POST(req: NextRequest) {
         secure: true,
         sameSite: "lax",
         path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: 60 * 60 * 24 * 30, // 30 days
       });
     }
 
-    res.cookies.set(
-      "kc_profile",
-      JSON.stringify({
-        name: kcProfile.name,
-        avatar: kcProfile.avatar,
-      }),
-      {
-        httpOnly: false,
-        path: "/",
-        maxAge: 60 * 10,
-      }
-    );
+    // 🔴 NOTE: we are NOT setting kc_profile cookie anymore
+    // That whole bit is gone to avoid any cookie-related issues for the success page
 
     return res;
   } catch (err) {
     console.error("Error in KingsChat callback route:", err);
-    // Generic catch-all
-    return redirectWithReason("INTERNAL_ERROR");
+    return NextResponse.redirect(`${BASE_URL}/rsvp/error`);
   }
 }

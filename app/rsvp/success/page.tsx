@@ -1,8 +1,11 @@
 // app/rsvp/success/page.tsx
 "use client";
 
+import { Suspense, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+// @ts-ignore
+import confetti from "canvas-confetti";
 import invite from "../../assets/images/invitationnew.jpg";
 import {
   Great_Vibes,
@@ -25,109 +28,63 @@ const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
 });
 
-type KcProfile = {
-  name?: string;
-  avatar?: string;
-};
-
+// Outer page just provides Suspense
 export default function RsvpSuccessPage() {
-  const [profile, setProfile] = useState<KcProfile | null>(null);
-  const [loaded, setLoaded] = useState(false);
-
-  // Read kc_profile from cookie on the client
-  useEffect(() => {
-    try {
-      const match = document.cookie.match(/(?:^|; )kc_profile=([^;]*)/);
-
-      if (!match) {
-        setLoaded(true);
-        return;
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-200">
+          <p>Loading your RSVP details…</p>
+        </main>
       }
+    >
+      <RsvpSuccessContent />
+    </Suspense>
+  );
+}
 
-      const decoded = decodeURIComponent(match[1]);
-      const parsed = JSON.parse(decoded);
-      setProfile(parsed);
-    } catch (err) {
-      console.error("Failed to parse kc_profile cookie", err);
-      setProfile(null);
-    } finally {
-      setLoaded(true);
-    }
-  }, []);
+// Inner component actually uses useSearchParams
+function RsvpSuccessContent() {
+  const searchParams = useSearchParams();
+  const name = searchParams.get("name") || "Beloved Guest";
+  const avatar = searchParams.get("avatar") || undefined;
 
-  // Confetti effect (dynamic import to avoid SSR/hydration issues)
+  // Confetti effect
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    let cancelled = false;
-    let intervalId: number | undefined;
+    const canvas = document.getElementById(
+      "sparkles-canvas"
+    ) as HTMLCanvasElement | null;
+    if (!canvas) return;
 
-    (async () => {
-      try {
-        // @ts-ignore
-        const mod = await import("canvas-confetti");
-        if (cancelled) return;
+    const myConfetti = confetti.create(canvas, {
+      resize: true,
+      useWorker: true,
+    });
 
-        const confetti = mod.default || mod;
-
-        const canvas = document.getElementById(
-          "sparkles-canvas"
-        ) as HTMLCanvasElement | null;
-        if (!canvas) return;
-
-        const myConfetti = confetti.create(canvas, {
-          resize: true,
-          useWorker: true,
+    const interval = window.setInterval(() => {
+      for (let i = 0; i < 3; i++) {
+        myConfetti({
+          particleCount: 6,
+          spread: 80,
+          startVelocity: 25,
+          gravity: 0.9,
+          scalar: 0.7,
+          ticks: 200,
+          colors: ["#ffffff", "#fef9c3", "#facc15", "#eab308"],
+          origin: {
+            x: Math.random(),
+            y: -0.1,
+          },
         });
-
-        intervalId = window.setInterval(() => {
-          for (let i = 0; i < 3; i++) {
-            myConfetti({
-              particleCount: 6,
-              spread: 80,
-              startVelocity: 25,
-              gravity: 0.9,
-              scalar: 0.7,
-              ticks: 200,
-              colors: ["#ffffff", "#fef9c3", "#facc15", "#eab308"],
-              origin: {
-                x: Math.random(),
-                y: -0.1,
-              },
-            });
-          }
-        }, 500);
-      } catch (err) {
-        console.error("Error loading canvas-confetti", err);
       }
-    })();
+    }, 500);
 
     return () => {
-      cancelled = true;
-      if (intervalId !== undefined) {
-        window.clearInterval(intervalId);
-      }
+      window.clearInterval(interval);
     };
   }, []);
-
-  if (!loaded) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-200">
-        <p>Loading your RSVP details…</p>
-      </main>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-200">
-        <p>We couldn&apos;t find your RSVP details. Please try again.</p>
-      </main>
-    );
-  }
-
-  const name = profile.name || "Beloved Guest";
-  const avatar = profile.avatar;
 
   return (
     <main className="relative min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900">
