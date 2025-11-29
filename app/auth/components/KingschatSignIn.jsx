@@ -25,7 +25,7 @@ const poppins = Poppins({
 export function KingsChatSignIn() {
   return (
     <a
-      className={`${poppins.className} cursor-pointer inline-flex items-center justify-center w-full sm:w-auto rounded-md px-6 py-3 text-sm font-semibold bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-lg shadow-amber-500/40 transition focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-slate-900`}
+      className={`${poppins.className} text-neutral-700 w-full cursor-pointer inline-flex items-center justify-center rounded-md px-6 py-3 text-sm font-semibold bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-lg shadow-amber-500/40 transition focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-slate-900`}
       onClick={() => window.open(getLoginUrl(), "_self")}
     >
       <Image src={logo} alt="Kingschat logo" className="w-8 h-8 mr-2" />

@@ -1,12 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 // @ts-ignore
 import confetti from "canvas-confetti";
 import { KingsChatSignIn } from "../auth/components/KingschatSignIn";
 import invite from "../assets/images/invitationnew.jpg";
-import { Great_Vibes, Cormorant_Garamond, Poppins, Kings } from "next/font/google";
+import {
+  Great_Vibes,
+  Cormorant_Garamond,
+  Poppins,
+  Kings,
+} from "next/font/google";
 
 // Script font for the main title
 const greatVibes = Great_Vibes({
@@ -27,10 +32,17 @@ const poppins = Poppins({
 });
 
 export default function RsvpPage() {
-  const handleKingsChatLogin = () => {
-    // TODO: replace with your real KingsChat login / redirect
-    console.log("Login with KingsChat clicked");
-  };
+  const [attendance, setAttendance] = useState<string>("");
+
+  // Load saved attendance from localStorage (if any)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const stored = window.localStorage.getItem("attendanceResponse");
+    if (stored) {
+      setAttendance(stored);
+    }
+  }, []);
 
   // Falling sparkles / confetti across whole page
   useEffect(() => {
@@ -70,10 +82,19 @@ export default function RsvpPage() {
     };
   }, []);
 
+  const handleAttendanceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setAttendance(value);
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("attendanceResponse", value);
+    }
+  };
+
+  const hasSelectedAttendance = attendance !== "";
+
   return (
-    <main
-      className={`relative min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900`}
-    >
+    <main className="relative min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900">
       {/* Full-page sparkles canvas */}
       <canvas
         id="sparkles-canvas"
@@ -114,19 +135,47 @@ export default function RsvpPage() {
               >
                 RSVP
               </h1>
-              {/* <p className={`${cormorant.className} text-sm sm:text-lg text-slate-200 leading-relaxed`}>
-                You are specially invited to the Thanksgiving Service of Highly
-                Esteemed Pastor Kayode Adesina. Please confirm your attendance
-                by logging in with KingsChat to register.
-              </p> */}
             </div>
 
-            <div className="space-y-3">
-<KingsChatSignIn />
-              {/* <p className="text-xs text-slate-300">
-                No details are entered on this page. After logging in with
-                KingsChat, you&apos;ll complete your registration there.
-              </p> */}
+            <div className="space-y-3  mx-8">
+              {/* Attendance dropdown */}
+              <div className="flex flex-col items-start gap-1 text-left my-4">
+                <label
+                  htmlFor="attendance"
+                  className={`${poppins.className} mb-2 text-md font-medium text-slate-200`}
+                >
+                  Will you be in attendance?
+                </label>
+                <select
+                  id="attendance"
+                  value={attendance}
+                  onChange={handleAttendanceChange}
+                  className="w-full rounded-sm border border-slate-600 bg-slate-800/70 px-3 py-2 text-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                >
+                  <option value="">Select an option</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+
+              {/* Login section: gated by attendance selection */}
+              {hasSelectedAttendance ? (
+                <KingsChatSignIn />
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <button
+                    type="button"
+                    disabled
+                    className={`${poppins.className} w-full cursor-not-allowed rounded-sm border border-slate-600 bg-slate-800/60 px-4 py-2 text-sm font-medium text-slate-400`}
+                  >
+                    Login with KingsChat to RSVP
+                  </button>
+                  <p className={`${poppins.className} text-sm mt-4`}>
+                    Please select whether you will be in attendance before
+                    proceeding to login.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

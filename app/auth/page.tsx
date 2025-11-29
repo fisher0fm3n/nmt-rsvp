@@ -13,6 +13,9 @@ export default async function KingsChatCallbackPage() {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("kc_access_token")?.value ?? null;
 
+  // Read attendance from cookie set on the RSVP page
+  const attendance = cookieStore.get("attendanceResponse")?.value ?? null;
+
   // if (!accessToken) {
   //   console.error(
   //     "KingsChat callback page: no kc_access_token cookie found"
@@ -67,6 +70,7 @@ export default async function KingsChatCallbackPage() {
         name: kcProfile.name,
         username: kcProfile.username,
         email: kcProfile.email,
+        attendance, // <- passes yes/no (or null if not set)
       }),
       cache: "no-store",
     }
