@@ -364,12 +364,12 @@ export default function RsvpPage() {
         ctx.fillText(`@${user.username}`, centerX, textY);
         textY += lineHeight;
 
-        if (user.seat) {
-          ctx.fillText(`Seat: ${user.seat}`, centerX, textY);
-          textY += lineHeight;
-        }
+        // if (user.seat) {
+        //   ctx.fillText(`Seat: ${user.seat}`, centerX, textY);
+        //   textY += lineHeight;
+        // }
 
-        ctx.fillText("Highly Esteemed Pastor Kayode Adesina", centerX, textY);
+        // ctx.fillText("Highly Esteemed Pastor Kayode Adesina", centerX, textY);
         textY += lineHeight;
 
         ctx.fillText("Thanksgiving Service", centerX, textY);
@@ -505,7 +505,7 @@ export default function RsvpPage() {
                       onClick={handleDownloadQr}
                       className={`${poppins.className} mt-3 cursor-pointer inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-lg shadow-amber-500/40 transition focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-slate-900`}
                     >
-                      Download QR Code (PNG)
+                      Download QR Code
                     </button>
                   </div>
                 )}
