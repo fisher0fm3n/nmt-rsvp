@@ -12,6 +12,11 @@ import QRCode from "react-qr-code";
 // 👇 adjust this import to where your hook actually lives
 import { useAuth } from "../auth/components/AuthProvider";
 
+// 👇 Lottie imports (adjust path to your JSON if needed)
+import Lottie from "react-lottie-player";
+import loadingAnimation from "../assets/lottie/loading.json";
+import Link from "next/link";
+
 // Script font for the main title
 const greatVibes = Great_Vibes({
   subsets: ["latin"],
@@ -37,12 +42,18 @@ type User = {
   email?: string | null;
   attendance?: string | null;
   seat?: string | null;
+  meal?: string | null;
   token: string;
   submittedAt?: string;
 };
 
 export default function RsvpPage() {
-  const { user: authUser } = useAuth() as { user: User | null };
+  // 👇 assume useAuth exposes a loading state
+  const { user: authUser, loading: authLoading } = useAuth() as {
+    user: User | null;
+    loading: boolean;
+  };
+
   const [attendance, setAttendance] = useState<string>("");
 
   // local, “live” user state that can differ from authUser after refresh/updates
@@ -127,6 +138,7 @@ export default function RsvpPage() {
           attendance: d.attendance ?? null,
           seat: d.seat ?? null,
           token: d.token,
+          meal: d.meal,
           submittedAt: d.updatedAt || d.submittedAt,
         };
 
@@ -270,6 +282,7 @@ export default function RsvpPage() {
           name: d.name ?? updatedUser.name,
           attendance: d.attendance ?? updatedUser.attendance,
           seat: d.seat ?? updatedUser.seat,
+          meal: d.meal ?? updatedUser.meal,
           token: d.token ?? updatedUser.token,
           submittedAt: d.updatedAt || d.submittedAt || updatedUser.submittedAt,
         };
@@ -357,19 +370,13 @@ export default function RsvpPage() {
         ctx.textAlign = "center";
 
         ctx.font = "bold 20px system-ui";
-        ctx.fillText(user.name, centerX, textY);
-        textY += lineHeight;
+        // ctx.fillText(user.name, centerX, textY);
+        // textY += lineHeight;
 
         ctx.font = "16px system-ui";
         ctx.fillText(`@${user.username}`, centerX, textY);
         textY += lineHeight;
 
-        // if (user.seat) {
-        //   ctx.fillText(`Seat: ${user.seat}`, centerX, textY);
-        //   textY += lineHeight;
-        // }
-
-        // ctx.fillText("Highly Esteemed Pastor Kayode Adesina", centerX, textY);
         textY += lineHeight;
 
         ctx.fillText("Thanksgiving Service", centerX, textY);
@@ -402,6 +409,8 @@ export default function RsvpPage() {
   const canShowQr =
     !!user?.token &&
     (!user.attendance || user.attendance.toLowerCase() !== "no");
+
+  const showLoadingState = authLoading && !authUser && !user;
 
   return (
     <main className="relative min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900">
@@ -439,8 +448,6 @@ export default function RsvpPage() {
               >
                 Thanksgiving Service
               </h1>
-
-              {/* Combined line requested */}
 
               <h1
                 className={`${greatVibes.className} text-center text-2xl text-amber-200 drop-shadow-md`}
@@ -509,6 +516,16 @@ export default function RsvpPage() {
                     </button>
                   </div>
                 )}
+
+                <div className="mt-2 flex flex-col space-y-4 border-t border-slate-700/70 pt-4">
+                  <h1>Menu</h1>
+                  <Link
+                    href={"/thanksgivingservice/menu"}
+                    className={`${poppins.className} cursor-pointer inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-lg shadow-amber-500/40 transition focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-not-allowed`}
+                  >
+                    Select your meal options
+                  </Link>
+                </div>
 
                 {/* Row 3: Edit form + logout */}
                 <form
@@ -590,7 +607,7 @@ export default function RsvpPage() {
                 </form>
               </div>
             ) : (
-              // No user yet → show sign-in
+              // No user yet
               <div className="space-y-3 mx-8">
                 {!user && (
                   <div className="block lg:hidden relative w-full lg:w-1/2">
@@ -604,7 +621,24 @@ export default function RsvpPage() {
                     </div>
                   </div>
                 )}
-                <KingsChatSignIn />
+
+                {showLoadingState ? (
+                  <div className="flex flex-col items-center justify-center py-8 gap-4">
+                    <Lottie
+                      animationData={loadingAnimation}
+                      loop
+                      play
+                      className="w-32 h-32 sm:w-40 sm:h-40"
+                    />
+                    <p
+                      className={`${poppins.className} text-sm text-slate-200`}
+                    >
+                      Checking your invitation…
+                    </p>
+                  </div>
+                ) : (
+                  <KingsChatSignIn />
+                )}
               </div>
             )}
           </div>

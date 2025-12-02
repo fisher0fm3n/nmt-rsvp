@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore
     }
-    router.push("/");
+    router.push("/thanksgivingservice");
   }
 
   const value: AuthContextValue = {

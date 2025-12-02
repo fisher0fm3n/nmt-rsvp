@@ -32,7 +32,7 @@ export default function KingsChatCallbackPage() {
           user: json.user,
         });
 
-        router.replace("/"); // or wherever you want to land
+        router.replace("/thanksgivingservice"); // or wherever you want to land
       } catch (e) {
         console.error("KingsChat callback error", e);
         setError("Network error while completing KingsChat login.");
