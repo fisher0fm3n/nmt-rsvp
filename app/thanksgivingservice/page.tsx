@@ -11,7 +11,6 @@ import {
   Great_Vibes,
   Cormorant_Garamond,
   Poppins,
-  Kings,
 } from "next/font/google";
 import QRCode from "react-qr-code";
 // 👇 adjust this import to where your hook actually lives
@@ -63,7 +62,7 @@ export default function RsvpPage() {
   // QR visibility toggle (hidden by default)
   const [qrVisible, setQrVisible] = useState(false);
 
-  // ref for QR code container (for downloading)
+  // ref for QR container (for PNG generation)
   const qrRef = useRef<HTMLDivElement | null>(null);
 
   // Load saved attendance from localStorage (if any)
@@ -213,15 +212,15 @@ export default function RsvpPage() {
       const isSecure = window.location.protocol === "https:";
       document.cookie = `attendanceResponse=${encodeURIComponent(
         value
-      )}; path=/; max-age=${maxAge}; SameSite=Lax${isSecure ? "; Secure" : ""}`;
+      )}; path=/; max-age=${maxAge}; SameSite=Lax${
+        isSecure ? "; Secure" : ""
+      }`;
     }
   };
 
   const handleLogout = () => {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("nmt_rsvp_auth");
-    }
-    if (typeof window !== "undefined") {
       window.location.reload();
     }
   };
@@ -284,7 +283,6 @@ export default function RsvpPage() {
 
       setUser(updatedUser);
 
-      // ✅ persist updated user to localStorage
       if (typeof window !== "undefined") {
         try {
           window.localStorage.setItem(
@@ -305,9 +303,10 @@ export default function RsvpPage() {
     }
   };
 
-  // ✅ Download QR as SVG
+  // ✅ Download QR as PNG with user details and event title
   const handleDownloadQr = () => {
-    if (!qrRef.current) return;
+    if (!qrRef.current || !user) return;
+
     const svg = qrRef.current.querySelector("svg");
     if (!svg) return;
 
@@ -319,16 +318,86 @@ export default function RsvpPage() {
       });
       const url = URL.createObjectURL(blob);
 
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "thanksgiving-qr-code.svg";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const img = new Image();
+      img.crossOrigin = "anonymous";
 
-      URL.revokeObjectURL(url);
+      img.onload = () => {
+        const padding = 40;
+        const qrWidth = img.width;
+        const qrHeight = img.height;
+
+        // Canvas dimensions: QR plus text area
+        const canvasWidth = qrWidth + padding * 2;
+        const canvasHeight = qrHeight + padding * 3 + 110; // extra for text
+
+        const canvas = document.createElement("canvas");
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+
+        // Background
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        // Draw QR centered horizontally
+        const qrX = (canvasWidth - qrWidth) / 2;
+        const qrY = padding;
+        ctx.drawImage(img, qrX, qrY);
+
+        const centerX = canvasWidth / 2;
+        let textY = qrY + qrHeight + padding;
+
+        // User details
+        ctx.fillStyle = "#000000";
+        ctx.textAlign = "center";
+
+        ctx.font = "bold 20px system-ui";
+        ctx.fillText(user.name, centerX, textY);
+        textY += 28;
+
+        ctx.font = "16px system-ui";
+        ctx.fillText(`@${user.username}`, centerX, textY);
+        textY += 24;
+
+        // if (user.seat) {
+        //   ctx.fillText(`Seat: ${user.seat}`, centerX, textY);
+        //   textY += 28;
+        // }
+
+        // Event title
+        ctx.font = "16px system-ui";
+        ctx.fillText(
+          "Highly Esteemed Pastor Kayode Adesina",
+          centerX,
+          textY
+        );
+        textY += 22;
+        ctx.fillText("Thanksgiving Service", centerX, textY);
+
+        const pngUrl = canvas.toDataURL("image/png");
+
+        const link = document.createElement("a");
+        link.href = pngUrl;
+        link.download = "thanksgiving-qr-code.png";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        URL.revokeObjectURL(url);
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+      };
+
+      img.src = url;
     } catch (err) {
-      console.error("Failed to download QR code:", err);
+      console.error("Failed to download QR PNG:", err);
     }
   };
 
@@ -376,7 +445,7 @@ export default function RsvpPage() {
                 Thanksgiving Service
               </h1>
 
-              {/* NEW: Combined line requested */}
+              {/* Combined line requested */}
               <p
                 className={`${cormorant.className} text-sm sm:text-base text-slate-300`}
               >
@@ -407,7 +476,7 @@ export default function RsvpPage() {
                   </p>
                   <p className="text-md text-slate-300">@{user.username}</p>
 
-                  {/* Show/Hide QR button (only if it's allowed at all) */}
+                  {/* Show/Hide QR button */}
                   {canShowQr && (
                     <div className="mt-4 flex justify-center gap-3 flex-wrap">
                       <button
@@ -421,7 +490,7 @@ export default function RsvpPage() {
                   )}
                 </div>
 
-                {/* Row 2: QR code (own row, only if canShowQr AND user has chosen to show it) */}
+                {/* Row 2: QR code + download (only if visible) */}
                 {canShowQr && qrVisible && (
                   <div className="flex flex-col items-center justify-center">
                     <div
@@ -446,7 +515,7 @@ export default function RsvpPage() {
                       onClick={handleDownloadQr}
                       className={`${poppins.className} mt-3 cursor-pointer inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-lg shadow-amber-500/40 transition focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-slate-900`}
                     >
-                      Download QR Code
+                      Download QR Code (PNG)
                     </button>
                   </div>
                 )}
@@ -531,9 +600,8 @@ export default function RsvpPage() {
                 </form>
               </div>
             ) : (
-              // No user yet → show sign-in (attendance selector kept if you want it)
+              // No user yet → show sign-in
               <div className="space-y-3 mx-8">
-                {/* Optional pre-login attendance here */}
                 {!user && (
                   <div className="block lg:hidden relative w-full lg:w-1/2">
                     <div className="overflow-hidden rounded-2xl shadow-xl border border-slate-700/60">
