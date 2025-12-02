@@ -318,7 +318,7 @@ export default function RsvpPage() {
       });
       const url = URL.createObjectURL(blob);
 
-      const img = new Image();
+      const img = new window.Image();
       img.crossOrigin = "anonymous";
 
       img.onload = () => {
