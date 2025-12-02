@@ -1,222 +1,173 @@
-// app/rsvp/admin/page.tsx
+// app/rsvp/page.tsx
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
 import Image from "next/image";
+import { useEffect, useState, useRef } from "react";
 // @ts-ignore
 import confetti from "canvas-confetti";
+import { KingsChatSignIn } from "../auth/components/KingschatSignIn";
 import invite from "../assets/images/invitationnew.jpg";
-import { Great_Vibes, Cormorant_Garamond, Poppins } from "next/font/google";
+import {
+  Great_Vibes,
+  Cormorant_Garamond,
+  Poppins,
+  Kings,
+} from "next/font/google";
+import QRCode from "react-qr-code";
+// 👇 adjust this import to where your hook actually lives
+import { useAuth } from "../auth/components/AuthProvider";
 
+// Script font for the main title
 const greatVibes = Great_Vibes({
   subsets: ["latin"],
   weight: "400",
 });
 
+// Elegant serif similar to Centaur for body text
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
+// Poppins for button text
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-// Updated to include id + seat
-type Entry = {
-  id: string; // ensure /api/nmt/pka-thanksgivingservice/all returns this
+type User = {
+  id: string;
   name: string;
   username: string;
   email?: string | null;
-  attendance?: string | null; // "yes" | "no" | null
-  submittedAt?: string; // ISO string
-  seat?: string | null; // "Table 1" - "Table 50" or "Bleachers"
+  attendance?: string | null;
+  seat?: string | null;
+  token: string;
+  submittedAt?: string;
 };
 
-type ApiResponse = {
-  status: boolean;
-  message: string;
-  count?: number;
-  data?: Entry[];
-};
+export default function RsvpPage() {
+  const { user: authUser } = useAuth() as { user: User | null };
+  const [attendance, setAttendance] = useState<string>("");
 
-const SESSION_KEY = "rsvp_admin_session"; // { username, password }
+  // local, “live” user state that can differ from authUser after refresh/updates
+  const [user, setUser] = useState<User | null>(null);
 
-// All allowed seat values
-const seatOptions = [
-  ...Array.from({ length: 50 }, (_, i) => `Table ${i + 1}`),
-  "Bleachers",
-];
+  // form fields for editing
+  const [formName, setFormName] = useState("");
+  const [formAttendance, setFormAttendance] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
-export default function AdminRsvpPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  // QR visibility toggle (hidden by default)
+  const [qrVisible, setQrVisible] = useState(false);
 
-  const [loading, setLoading] = useState(false); // global login/refresh loading
-  const [restoring, setRestoring] = useState(true); // restoring session on first load
+  // ref for QR code container (for downloading)
+  const qrRef = useRef<HTMLDivElement | null>(null);
 
-  const [error, setError] = useState<string | null>(null);
-  const [entries, setEntries] = useState<Entry[] | null>(null);
-  const [apiMessage, setApiMessage] = useState<string | null>(null);
-  const [totalCount, setTotalCount] = useState<number | null>(null);
+  // Load saved attendance from localStorage (if any)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
-  // Per-entry loading state for seat updates
-  const [seatLoading, setSeatLoading] = useState<Record<string, boolean>>({});
+    const stored = window.localStorage.getItem("attendanceResponse");
+    if (stored) {
+      setAttendance(stored);
+    }
+  }, []);
 
-  const isAuthed = entries !== null;
-
-  const formatAttendance = (value?: string | null) => {
-    if (!value) return "—";
-    return value.toLowerCase() === "yes"
-      ? "Yes"
-      : value.toLowerCase() === "no"
-      ? "No"
-      : value;
-  };
-
-  const formatSubmittedAt = (value?: string) => {
-    if (!value) return "—";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return date.toLocaleString("en-NG", {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // ---- Shared login + fetch helper ----
-  const loginAndFetch = async (u: string, p: string) => {
-    setError(null);
-    setApiMessage(null);
-
-    const trimmedUser = u.trim();
-    const trimmedPass = p.trim();
-
-    if (!trimmedUser || !trimmedPass) {
-      setError("Please enter both username and password.");
+  // When authUser changes (e.g. log in/log out), use it as the baseline local user
+  useEffect(() => {
+    if (!authUser) {
+      setUser(null);
+      setFormName("");
+      setFormAttendance("");
+      setQrVisible(false);
       return;
     }
 
-    try {
-      setLoading(true);
+    setUser(authUser);
+    setFormName(authUser.name || "");
+    setFormAttendance(authUser.attendance || "");
+    // don't auto-show QR when user changes; keep it hidden until toggled
+    setQrVisible(false);
+  }, [authUser]);
 
-      const res = await fetch(
-        "https://pcdl.co/api/nmt/pka-thanksgivingservice/all",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key":
-              "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
-          },
-          body: JSON.stringify({
-            username: trimmedUser,
-            password: trimmedPass,
-          }),
-          cache: "no-store",
-        }
-      );
-
-      if (!res.ok) {
-        setError(`Request failed with status ${res.status}`);
-        return;
-      }
-
-      const json: ApiResponse = await res.json();
-      setApiMessage(json.message ?? null);
-
-      if (!json.status) {
-        setError(json.message || "Authentication failed.");
-        return;
-      }
-
-      if (!json.data || !Array.isArray(json.data)) {
-        setError("No data returned from API.");
-        return;
-      }
-
-      // ✅ Success: store entries & count & persist session
-      setEntries(json.data);
-      setTotalCount(
-        typeof json.count === "number" ? json.count : json.data.length
-      );
-
-      if (typeof window !== "undefined") {
-        try {
-          window.localStorage.setItem(
-            SESSION_KEY,
-            JSON.stringify({
-              username: trimmedUser,
-              password: trimmedPass,
-            })
-          );
-        } catch (storageErr) {
-          console.warn("Failed to persist admin session", storageErr);
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching RSVP entries:", err);
-      setError("Network error while fetching RSVP entries.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ---- Handle form submit ----
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    await loginAndFetch(username, password);
-  };
-
-  // ---- Restore session on first load (keep user logged in) ----
+  // On mount / refresh: if we have an authUser id, fetch the freshest data from backend
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!authUser?.id) return;
+
+    let cancelled = false;
 
     (async () => {
       try {
-        const raw = window.localStorage.getItem(SESSION_KEY);
-        if (!raw) {
-          setRestoring(false);
+        const res = await fetch(
+          `https://pcdl.co/api/nmt/pka-thanksgivingservice?id=${encodeURIComponent(
+            authUser.id
+          )}`,
+          {
+            method: "GET",
+            headers: {
+              "x-api-key":
+                "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
+            },
+          }
+        );
+
+        if (!res.ok) {
+          console.warn("Failed to refresh RSVP user data, status:", res.status);
           return;
         }
 
-        let parsed: { username?: string; password?: string } = {};
-        try {
-          parsed = JSON.parse(raw);
-        } catch (err) {
-          console.warn("Failed to parse stored admin session", err);
-          window.localStorage.removeItem(SESSION_KEY);
-          setRestoring(false);
-          return;
+        const json = await res.json().catch(() => null);
+        if (!json?.status || !json.data) return;
+
+        const d = json.data;
+
+        const refreshedUser: User = {
+          id: d.id,
+          name: d.name,
+          username: d.username,
+          email: d.email ?? null,
+          attendance: d.attendance ?? null,
+          seat: d.seat ?? null,
+          token: d.token,
+          submittedAt: d.updatedAt || d.submittedAt,
+        };
+
+        if (cancelled) return;
+
+        setUser(refreshedUser);
+        setFormName(refreshedUser.name || "");
+        setFormAttendance(refreshedUser.attendance || "");
+        setQrVisible(false); // still hidden by default after refresh
+
+        if (typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem(
+              "nmt_rsvp_auth",
+              JSON.stringify({ user: refreshedUser })
+            );
+          } catch (err) {
+            console.warn(
+              "Failed to persist refreshed user to localStorage",
+              err
+            );
+          }
         }
-
-        if (!parsed.username || !parsed.password) {
-          window.localStorage.removeItem(SESSION_KEY);
-          setRestoring(false);
-          return;
-        }
-
-        // Hydrate fields for convenience
-        setUsername(parsed.username);
-        setPassword(parsed.password);
-
-        // Try to re-login silently
-        await loginAndFetch(parsed.username, parsed.password);
-      } finally {
-        setRestoring(false);
+      } catch (err) {
+        console.warn("Error refreshing RSVP user data:", err);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
-  // ---- Confetti effect ONLY on the login screen ----
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser?.id]);
+
+  // Falling sparkles / confetti across whole page
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (isAuthed) return; // don't run confetti on the table view
 
     const canvas = document.getElementById(
       "sparkles-canvas"
@@ -249,439 +200,357 @@ export default function AdminRsvpPage() {
     return () => {
       window.clearInterval(interval);
     };
-  }, [isAuthed]);
+  }, []);
 
-  // ---- Logout (clear session + state) ----
-  const handleLogout = () => {
-    setEntries(null);
-    setApiMessage(null);
-    setError(null);
-    setTotalCount(null);
+  const handleAttendanceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setAttendance(value);
+
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem(SESSION_KEY);
+      window.localStorage.setItem("attendanceResponse", value);
+
+      const maxAge = 60 * 60 * 24 * 30; // 30 days
+      const isSecure = window.location.protocol === "https:";
+      document.cookie = `attendanceResponse=${encodeURIComponent(
+        value
+      )}; path=/; max-age=${maxAge}; SameSite=Lax${isSecure ? "; Secure" : ""}`;
     }
   };
 
-  // ---- Refresh button handler (re-fetch using stored session) ----
-  const handleRefresh = async () => {
-    if (typeof window === "undefined") return;
-
-    const raw = window.localStorage.getItem(SESSION_KEY);
-    if (!raw) {
-      setError("No saved admin session found. Please log in again.");
-      return;
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("nmt_rsvp_auth");
     }
-
-    try {
-      const parsed: { username?: string; password?: string } = JSON.parse(raw);
-      if (!parsed.username || !parsed.password) {
-        setError("Saved admin session is invalid. Please log in again.");
-        window.localStorage.removeItem(SESSION_KEY);
-        return;
-      }
-
-      await loginAndFetch(parsed.username, parsed.password);
-    } catch (err) {
-      console.error("Failed to refresh using saved session", err);
-      setError("Could not refresh entries. Please log in again.");
+    if (typeof window !== "undefined") {
+      window.location.reload();
     }
   };
 
-  // ---- Seat change handler (auto-set when selected, with per-row loading) ----
-  const handleSeatChange = async (entryId: string, seat: string) => {
-    if (!seat) return; // ignore clearing for now
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
 
-    setError(null);
-    setApiMessage(null);
-
-    // mark this entry as loading
-    setSeatLoading((prev) => ({ ...prev, [entryId]: true }));
+    setSaving(true);
+    setSaveError(null);
+    setSaveSuccess(null);
 
     try {
       const res = await fetch(
-        "https://pcdl.co/api/nmt/pka-thanksgivingservice/seat",
+        "https://pcdl.co/api/nmt/pka-thanksgivingservice",
         {
-          method: "POST",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             "x-api-key":
               "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
           },
-          body: JSON.stringify({ id: entryId, seat }),
+          body: JSON.stringify({
+            id: user.id, // never shown to UI
+            name: formName,
+            attendance: formAttendance || null,
+          }),
         }
       );
 
       if (!res.ok) {
-        setError(`Failed to set seat (status ${res.status})`);
+        const errJson = await res.json().catch(() => null);
+        const msg =
+          errJson?.message ||
+          errJson?.error ||
+          `Failed to update (status ${res.status})`;
+        setSaveError(msg);
         return;
       }
 
-      const json = await res.json();
+      const json = await res.json().catch(() => ({} as any));
 
-      if (!json.status) {
-        setError(json.message || "Failed to set seat.");
-        return;
+      let updatedUser: User = {
+        ...user,
+        name: formName,
+        attendance: formAttendance || null,
+      };
+
+      if (json?.data) {
+        const d = json.data;
+        updatedUser = {
+          ...updatedUser,
+          name: d.name ?? updatedUser.name,
+          attendance: d.attendance ?? updatedUser.attendance,
+          seat: d.seat ?? updatedUser.seat,
+          token: d.token ?? updatedUser.token,
+          submittedAt: d.updatedAt || d.submittedAt || updatedUser.submittedAt,
+        };
       }
 
-      // ✅ Optimistically update local state with new seat
-      setEntries((prev) =>
-        prev
-          ? prev.map((e) =>
-              e.id === entryId
-                ? {
-                    ...e,
-                    seat: json.data?.seat ?? seat,
-                  }
-                : e
-            )
-          : prev
-      );
+      setUser(updatedUser);
 
-      setApiMessage("Seat updated successfully.");
-    } catch (err) {
-      console.error("Error setting seat:", err);
-      setError("Network error while setting seat.");
+      // ✅ persist updated user to localStorage
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(
+            "nmt_rsvp_auth",
+            JSON.stringify({ user: updatedUser })
+          );
+        } catch (err) {
+          console.warn("Failed to update nmt_rsvp_auth in localStorage", err);
+        }
+      }
+
+      setSaveSuccess("Your details have been updated.");
+    } catch (err: any) {
+      console.error("Error updating RSVP details:", err);
+      setSaveError("Network error while updating your details.");
     } finally {
-      // clear loading for this entry
-      setSeatLoading((prev) => {
-        const copy = { ...prev };
-        delete copy[entryId];
-        return copy;
-      });
+      setSaving(false);
     }
   };
 
-  // While restoring session and not yet decided, show a simple loading state
-  if (restoring && !isAuthed) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900 text-slate-100">
-        <p className="text-lg">Loading admin session…</p>
-      </main>
-    );
-  }
+  // ✅ Download QR as SVG
+  const handleDownloadQr = () => {
+    if (!qrRef.current) return;
+    const svg = qrRef.current.querySelector("svg");
+    if (!svg) return;
 
-  // 🔹 VIEW 1: LOGIN + SIDE BANNER (not authed)
-  if (!isAuthed) {
-    return (
-      <main className="relative min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900 text-lg">
-        {/* Sparkles/Confetti Canvas */}
-        <canvas
-          id="sparkles-canvas"
-          className="pointer-events-none fixed inset-0 z-0 w-full"
-        />
+    try {
+      const serializer = new XMLSerializer();
+      const svgStr = serializer.serializeToString(svg);
+      const blob = new Blob([svgStr], {
+        type: "image/svg+xml;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
 
-        <div className="text-center relative z-10 w-full max-w-7xl bg-slate-900/60 border border-slate-700/60 rounded-3xl shadow-2xl backdrop-blur-md p-5 sm:p-7 lg:p-9">
-          <div className="flex flex-col gap-10 lg:flex-row items-center">
-            {/* Invitation / Hero Image */}
-            <div className="relative w-full lg:w-1/2">
-              <div className="overflow-hidden rounded-2xl shadow-xl border border-slate-700/60">
-                <Image
-                  src={invite}
-                  alt="Thanksgiving Service Invitation"
-                  className="h-full w-full object-cover"
-                  priority
-                />
-              </div>
-            </div>
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "thanksgiving-qr-code.svg";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-            {/* Right Side: Login */}
-            <div className="flex-1 text-left space-y-7 mt-4 lg:mt-0">
-              <div className="text-center space-y-3">
-                <p
-                  className={`${cormorant.className} mt-2 mb-8 text-sm sm:text-base tracking-[0.25em] uppercase text-slate-400`}
-                >
-                  Highly Esteemed Pastor Kayode Adesina
-                </p>
-                <h1
-                  className={`${greatVibes.className} text-center text-4xl sm:text-6xl text-amber-200 drop-shadow-md`}
-                >
-                  Thanksgiving Service
-                </h1>
-                <h2
-                  className={`${cormorant.className} text-center text-2xl sm:text-5xl text-blue-300 mt-4`}
-                >
-                  RSVP Admin
-                </h2>
-              </div>
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download QR code:", err);
+    }
+  };
 
-              <section className="space-y-5">
-                <form
-                  onSubmit={handleSubmit}
-                  className="max-w-md mx-auto space-y-5"
-                >
-                  <div className="text-left">
-                    <label
-                      className={`${poppins.className} block text-base text-slate-200 mb-1.5`}
-                      htmlFor="username"
-                    >
-                      Username
-                    </label>
-                    <input
-                      id="username"
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="w-full rounded-lg bg-slate-950/60 border border-slate-700/70 px-4 py-2.5 text-base text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
-                      autoComplete="username"
-                    />
-                  </div>
+  // ✅ QR can only be shown if:
+  //  - user has a token
+  //  - attendance is not explicitly "no"
+  const canShowQr =
+    !!user?.token &&
+    (!user.attendance || user.attendance.toLowerCase() !== "no");
 
-                  <div className="text-left">
-                    <label
-                      className={`${poppins.className} block text-base text-slate-200 mb-1.5`}
-                      htmlFor="password"
-                    >
-                      Password
-                    </label>
-                    <input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-lg bg-slate-950/60 border border-slate-700/70 px-4 py-2.5 text-base text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
-                      autoComplete="current-password"
-                    />
-                  </div>
-
-                  {error && (
-                    <p className="text-sm text-red-400 text-center">{error}</p>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className={`${poppins.className} cursor-pointer w-full inline-flex items-center justify-center rounded-md px-5 py-3 text-base font-semibold bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-lg shadow-amber-500/40 transition focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-not-allowed`}
-                  >
-                    {loading ? "Signing in…" : "Login to View RSVPs"}
-                  </button>
-                </form>
-              </section>
-            </div>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  // 🔹 VIEW 2: FULL-SCREEN TABLE, GRADIENT BG, TOP BLURRED BANNER
   return (
-    <main className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900 px-3 sm:px-5 py-5 sm:py-7 text-lg">
+    <main className="relative min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900">
+      {/* Full-page sparkles canvas */}
       <canvas
         id="sparkles-canvas"
         className="pointer-events-none fixed inset-0 z-0 w-full"
       />
 
-      <div className="relative z-10 max-w-6xl mx-auto space-y-7 sm:space-y-9">
-        {/* Top banner */}
-        <section className="relative w-full rounded-3xl overflow-hidden border border-slate-700/60 shadow-2xl bg-slate-950/60">
-          <div className="relative h-44 sm:h-56 md:h-72">
-            <Image
-              src={invite}
-              alt="Thanksgiving Service Invite"
-              fill
-              className="object-cover blur-sm scale-110 brightness-75"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/40 to-slate-950/90" />
+      {/* Content card */}
+      <div className="text-center relative z-10 w-full max-w-5xl bg-slate-900/60 border border-slate-700/60 rounded-3xl shadow-2xl backdrop-blur-md p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-center">
+          {/* Invitation Image */}
+          <div className="hidden lg:block relative w-full lg:w-1/2">
+            <div className="overflow-hidden rounded-2xl shadow-xl border border-slate-700/60">
+              <Image
+                src={invite}
+                alt="Thanksgiving Service Invitation"
+                className="h-full w-full object-cover"
+                priority
+              />
+            </div>
+          </div>
 
-            <div className="relative z-10 flex flex-col items-start justify-end h-full px-5 sm:px-7 md:px-9 py-5 sm:py-7">
+          {/* Right side */}
+          <div className="flex-1 text-center space-y-6">
+            <div className="space-y-2">
               <p
-                className={`${cormorant.className} font-bold text-base mb-4 tracking-[0.25em] uppercase text-slate-300`}
+                className={`${cormorant.className} my-4 text-md tracking-[0.25em] uppercase text-slate-400`}
               >
                 Highly Esteemed Pastor Kayode Adesina
               </p>
               <h1
-                className={`${greatVibes.className} text-3xl sm:text-5xl md:text-6xl text-amber-200 drop-shadow-md`}
+                className={`${greatVibes.className} text-center text-4xl sm:text-6xl text-amber-200 drop-shadow-md`}
               >
                 Thanksgiving Service
               </h1>
 
-              <div className="mt-2 w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <h2
-                  className={`${cormorant.className} text-xl sm:text-3xl md:text-4xl text-emerald-300`}
-                >
-                  RSVP Admin Dashboard
-                </h2>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleRefresh}
-                    disabled={loading}
-                    className={`${poppins.className} text-base cursor-pointer px-4 py-2 rounded-md bg-slate-200/90 hover:bg-white text-slate-900 font-semibold shadow disabled:opacity-60 disabled:cursor-not-allowed`}
-                  >
-                    {loading ? "Refreshing…" : "Refresh"}
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    className={`${poppins.className} text-base cursor-pointer px-4 py-2 rounded-md bg-red-500/80 hover:bg-red-400 text-slate-900 font-semibold shadow`}
-                  >
-                    Logout
-                  </button>
-                </div>
-              </div>
-
-              <p className="mt-3 text-[1.125rem] text-slate-200 max-w-md">
-                View and manage all registered attendees for the Thanksgiving
-                Service.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Table / List section */}
-        <section className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-            <div>
-              <h3
-                className={`${cormorant.className} text-2xl sm:text-[2.25rem] text-amber-200 font-semibold`}
+              {/* NEW: Combined line requested */}
+              <p
+                className={`${cormorant.className} text-sm sm:text-base text-slate-300`}
               >
-                RSVP Entries
-              </h3>
-              {error && <p className="text-sm text-red-400 mt-1">{error}</p>}
+                Highly Esteemed Pastor Kayode Adesina - Thanksgiving Service
+              </p>
+
+              <h1
+                className={`${greatVibes.className} text-center text-2xl text-amber-200 drop-shadow-md`}
+              >
+                RSVP
+              </h1>
             </div>
-            <p className="text-base text-slate-300">
-              Showing {entries?.length ?? 0} of{" "}
-              {totalCount ?? entries?.length ?? 0} entries
-            </p>
-          </div>
 
-          {/* 📱 MOBILE: Card list (no horizontal scroll) */}
-          <div className="space-y-3 md:hidden">
-            {entries!.map((entry, idx) => {
-              const thisRowLoading = !!seatLoading[entry.id];
-              return (
-                <div
-                  key={`${entry.id}-${idx}`}
-                  className="rounded-2xl border border-slate-700/70 bg-slate-950/80 p-4 flex flex-col gap-2"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-4">
-                    <div>
-                      <p className="font-semibold text-slate-50 text-lg">
-                        {entry.name}
-                      </p>
-                      <p className="text-slate-300 text-base">
-                        @{entry.username}
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="text-base font-bold text-slate-200">
-                    Attendance Status: {formatAttendance(entry.attendance)}
+            {/* If user with token is present -> show form + logout (and QR controls) */}
+            {user && user.token ? (
+              <div className="space-y-6 mx-4 sm:mx-8 text-left">
+                {/* Row 1: Profile info */}
+                <div className="text-center">
+                  <p
+                    className={`${poppins.className} text-base text-slate-200`}
+                  >
+                    Welcome
                   </p>
+                  <p
+                    className={`${cormorant.className} text-3xl text-amber-200`}
+                  >
+                    {user.name}
+                  </p>
+                  <p className="text-md text-slate-300">@{user.username}</p>
 
-                  <div className="flex flex-col gap-2 mt-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-slate-300 text-base">Seat</span>
-                      <div className="flex items-center gap-3">
-                        <select
-                          className="bg-slate-900 border border-slate-600 rounded-md px-3 py-2 text-base text-slate-100"
-                          value={entry.seat ?? ""}
-                          onChange={(e) =>
-                            handleSeatChange(entry.id, e.target.value)
-                          }
-                          disabled={thisRowLoading || loading}
-                        >
-                          <option value="">—</option>
-                          {seatOptions.map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                        {thisRowLoading && (
-                          <span className="inline-flex h-5 w-5 items-center justify-center">
-                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" />
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <p className="text-slate-400 text-sm">
-                      Submitted: {formatSubmittedAt(entry.submittedAt)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* 💻 DESKTOP/TABLET: Table view */}
-          <div className="hidden md:block">
-            <div className="w-full overflow-x-auto rounded-xl border border-slate-700/60 bg-slate-950/70">
-              <table className="min-w-full text-left text-base sm:text-lg text-slate-100">
-                <thead className="bg-slate-950/90 text-lg">
-                  <tr>
-                    <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold">
-                      Name
-                    </th>
-                    <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold">
-                      Username
-                    </th>
-                    <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold">
-                      Attendance
-                    </th>
-                    <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">
-                      Seat
-                    </th>
-                    <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">
-                      Submitted At
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="text-[1.1rem]">
-                  {entries!.map((entry, idx) => {
-                    const thisRowLoading = !!seatLoading[entry.id];
-                    return (
-                      <tr
-                        key={`${entry.id ?? entry.username}-${idx}`}
-                        className={
-                          idx % 2 === 0 ? "bg-slate-900/60" : "bg-slate-900/30"
-                        }
+                  {/* Show/Hide QR button (only if it's allowed at all) */}
+                  {canShowQr && (
+                    <div className="mt-4 flex justify-center gap-3 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setQrVisible((prev) => !prev)}
+                        className={`${poppins.className} cursor-pointer inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600 transition`}
                       >
-                        <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                          {entry.name}
-                        </td>
-                        <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                          {entry.username}
-                        </td>
-                        <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                          {formatAttendance(entry.attendance)}
-                        </td>
-                        <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <select
-                              className="bg-slate-900 border border-slate-600 rounded-md px-3 py-2 text-base text-slate-100"
-                              value={entry.seat ?? ""}
-                              onChange={(e) =>
-                                handleSeatChange(entry.id, e.target.value)
-                              }
-                              disabled={thisRowLoading || loading}
-                            >
-                              <option value="">—</option>
-                              {seatOptions.map((opt) => (
-                                <option key={opt} value={opt}>
-                                  {opt}
-                                </option>
-                              ))}
-                            </select>
-                            {thisRowLoading && (
-                              <span className="inline-flex h-5 w-5 items-center justify-center">
-                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" />
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                          {formatSubmittedAt(entry.submittedAt)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        {qrVisible ? "Hide QR Code" : "Show QR Code"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Row 2: QR code (own row, only if canShowQr AND user has chosen to show it) */}
+                {canShowQr && qrVisible && (
+                  <div className="flex flex-col items-center justify-center">
+                    <div
+                      ref={qrRef}
+                      className="bg-white p-3 rounded-2xl max-w-[240px] w-full"
+                    >
+                      <QRCode
+                        value={user.token}
+                        size={220}
+                        style={{
+                          height: "auto",
+                          maxWidth: "100%",
+                          width: "100%",
+                        }}
+                      />
+                    </div>
+                    <p className="mt-2 text-[0.8rem] text-slate-300 text-center">
+                      Present this QR code
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleDownloadQr}
+                      className={`${poppins.className} mt-3 cursor-pointer inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-lg shadow-amber-500/40 transition focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-slate-900`}
+                    >
+                      Download QR Code
+                    </button>
+                  </div>
+                )}
+
+                {/* Row 3: Edit form + logout */}
+                <form
+                  onSubmit={handleSave}
+                  className="mt-2 space-y-4 border-t border-slate-700/70 pt-4"
+                >
+                  <div className="flex flex-col gap-1">
+                    <label
+                      className={`${poppins.className} text-sm text-slate-200`}
+                      htmlFor="name"
+                    >
+                      Name
+                    </label>
+                    <input
+                      id="name"
+                      type="text"
+                      value={formName}
+                      onChange={(e) => setFormName(e.target.value)}
+                      className="w-full rounded-md border border-slate-600 bg-slate-800/70 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label
+                      className={`${poppins.className} text-sm text-slate-200`}
+                      htmlFor="attendance"
+                    >
+                      Will you be in attendance?
+                    </label>
+                    <select
+                      id="attendance"
+                      value={formAttendance}
+                      onChange={(e) => setFormAttendance(e.target.value)}
+                      className="w-full rounded-md border border-slate-600 bg-slate-800/70 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                    >
+                      <option value="">Select an option</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                  </div>
+
+                  {saveError && (
+                    <p className="text-xs text-red-400">{saveError}</p>
+                  )}
+                  {saveSuccess && (
+                    <p className="text-xs text-emerald-300">{saveSuccess}</p>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mt-2">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className={`${poppins.className} cursor-pointer inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-lg shadow-amber-500/40 transition focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-not-allowed`}
+                    >
+                      {saving ? "Saving…" : "Save Details"}
+                    </button>
+
+                    {user && (
+                      <div className="block lg:hidden relative w-full lg:w-1/2">
+                        <div className="overflow-hidden rounded-2xl shadow-xl border border-slate-700/60">
+                          <Image
+                            src={invite}
+                            alt="Thanksgiving Service Invitation"
+                            className="h-full w-full object-cover"
+                            priority
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className={`${poppins.className} cursor-pointer inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600 transition`}
+                    >
+                      Logout
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              // No user yet → show sign-in (attendance selector kept if you want it)
+              <div className="space-y-3 mx-8">
+                {/* Optional pre-login attendance here */}
+                {!user && (
+                  <div className="block lg:hidden relative w-full lg:w-1/2">
+                    <div className="overflow-hidden rounded-2xl shadow-xl border border-slate-700/60">
+                      <Image
+                        src={invite}
+                        alt="Thanksgiving Service Invitation"
+                        className="h-full w-full object-cover"
+                        priority
+                      />
+                    </div>
+                  </div>
+                )}
+                <KingsChatSignIn />
+              </div>
+            )}
           </div>
-        </section>
+        </div>
       </div>
     </main>
   );
