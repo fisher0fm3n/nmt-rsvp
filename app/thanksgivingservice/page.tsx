@@ -112,10 +112,7 @@ export default function RsvpPage() {
         );
 
         if (!res.ok) {
-          console.warn(
-            "Failed to refresh RSVP user data, status:",
-            res.status
-          );
+          console.warn("Failed to refresh RSVP user data, status:", res.status);
           return;
         }
 
@@ -213,9 +210,7 @@ export default function RsvpPage() {
       const isSecure = window.location.protocol === "https:";
       document.cookie = `attendanceResponse=${encodeURIComponent(
         value
-      )}; path=/; max-age=${maxAge}; SameSite=Lax${
-        isSecure ? "; Secure" : ""
-      }`;
+      )}; path=/; max-age=${maxAge}; SameSite=Lax${isSecure ? "; Secure" : ""}`;
     }
   };
 
@@ -237,19 +232,22 @@ export default function RsvpPage() {
     setSaveSuccess(null);
 
     try {
-      const res = await fetch("https://pcdl.co/api/nmt/pka-thanksgivingservice", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key":
-            "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
-        },
-        body: JSON.stringify({
-          id: user.id, // never shown to UI
-          name: formName,
-          attendance: formAttendance || null,
-        }),
-      });
+      const res = await fetch(
+        "https://pcdl.co/api/nmt/pka-thanksgivingservice",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key":
+              "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
+          },
+          body: JSON.stringify({
+            id: user.id, // never shown to UI
+            name: formName,
+            attendance: formAttendance || null,
+          }),
+        }
+      );
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
@@ -323,7 +321,7 @@ export default function RsvpPage() {
       <div className="text-center relative z-10 w-full max-w-5xl bg-slate-900/60 border border-slate-700/60 rounded-3xl shadow-2xl backdrop-blur-md p-4 sm:p-6 lg:p-8">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-center">
           {/* Invitation Image */}
-          <div className="relative w-full lg:w-1/2">
+          <div className="hidden lg:block relative w-full lg:w-1/2">
             <div className="overflow-hidden rounded-2xl shadow-xl border border-slate-700/60">
               <Image
                 src={invite}
@@ -363,7 +361,7 @@ export default function RsvpPage() {
                   <p
                     className={`${poppins.className} text-base text-slate-200`}
                   >
-                    Logged in as
+                    Welcome
                   </p>
                   <p
                     className={`${cormorant.className} text-3xl text-amber-200`}
@@ -480,6 +478,19 @@ export default function RsvpPage() {
                       {saving ? "Saving…" : "Save Details"}
                     </button>
 
+                    {user && (
+                      <div className="block lg:hidden relative w-full lg:w-1/2">
+                        <div className="overflow-hidden rounded-2xl shadow-xl border border-slate-700/60">
+                          <Image
+                            src={invite}
+                            alt="Thanksgiving Service Invitation"
+                            className="h-full w-full object-cover"
+                            priority
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     <button
                       type="button"
                       onClick={handleLogout}
@@ -494,7 +505,18 @@ export default function RsvpPage() {
               // No user yet → show sign-in (attendance selector kept if you want it)
               <div className="space-y-3 mx-8">
                 {/* Optional pre-login attendance here */}
-
+                {!user && (
+                  <div className="block lg:hidden relative w-full lg:w-1/2">
+                    <div className="overflow-hidden rounded-2xl shadow-xl border border-slate-700/60">
+                      <Image
+                        src={invite}
+                        alt="Thanksgiving Service Invitation"
+                        className="h-full w-full object-cover"
+                        priority
+                      />
+                    </div>
+                  </div>
+                )}
                 <KingsChatSignIn />
               </div>
             )}
