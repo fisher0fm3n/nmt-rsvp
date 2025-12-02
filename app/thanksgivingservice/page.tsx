@@ -7,11 +7,7 @@ import { useEffect, useState, useRef } from "react";
 import confetti from "canvas-confetti";
 import { KingsChatSignIn } from "../auth/components/KingschatSignIn";
 import invite from "../assets/images/invitationnew.jpg";
-import {
-  Great_Vibes,
-  Cormorant_Garamond,
-  Poppins,
-} from "next/font/google";
+import { Great_Vibes, Cormorant_Garamond, Poppins } from "next/font/google";
 import QRCode from "react-qr-code";
 // 👇 adjust this import to where your hook actually lives
 import { useAuth } from "../auth/components/AuthProvider";
@@ -212,9 +208,7 @@ export default function RsvpPage() {
       const isSecure = window.location.protocol === "https:";
       document.cookie = `attendanceResponse=${encodeURIComponent(
         value
-      )}; path=/; max-age=${maxAge}; SameSite=Lax${
-        isSecure ? "; Secure" : ""
-      }`;
+      )}; path=/; max-age=${maxAge}; SameSite=Lax${isSecure ? "; Secure" : ""}`;
     }
   };
 
@@ -326,9 +320,16 @@ export default function RsvpPage() {
         const qrWidth = img.width;
         const qrHeight = img.height;
 
-        // Canvas dimensions: QR plus text area
+        // how many lines of text we'll draw
+        const baseLines = 3; // name, username, first event line
+        const extraSeatLine = user.seat ? 1 : 0;
+        const totalLines = baseLines + extraSeatLine + 1; // +1 for second event line
+
+        const lineHeight = 26; // px between lines
+        const textBlockHeight = totalLines * lineHeight + 20; // small extra margin
+
         const canvasWidth = qrWidth + padding * 2;
-        const canvasHeight = qrHeight + padding * 3 + 110; // extra for text
+        const canvasHeight = qrHeight + padding * 2 + textBlockHeight;
 
         const canvas = document.createElement("canvas");
         canvas.width = canvasWidth;
@@ -344,7 +345,7 @@ export default function RsvpPage() {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-        // Draw QR centered horizontally
+        // Draw QR
         const qrX = (canvasWidth - qrWidth) / 2;
         const qrY = padding;
         ctx.drawImage(img, qrX, qrY);
@@ -352,31 +353,25 @@ export default function RsvpPage() {
         const centerX = canvasWidth / 2;
         let textY = qrY + qrHeight + padding;
 
-        // User details
         ctx.fillStyle = "#000000";
         ctx.textAlign = "center";
 
         ctx.font = "bold 20px system-ui";
         ctx.fillText(user.name, centerX, textY);
-        textY += 28;
+        textY += lineHeight;
 
         ctx.font = "16px system-ui";
         ctx.fillText(`@${user.username}`, centerX, textY);
-        textY += 24;
+        textY += lineHeight;
 
-        // if (user.seat) {
-        //   ctx.fillText(`Seat: ${user.seat}`, centerX, textY);
-        //   textY += 28;
-        // }
+        if (user.seat) {
+          ctx.fillText(`Seat: ${user.seat}`, centerX, textY);
+          textY += lineHeight;
+        }
 
-        // Event title
-        ctx.font = "16px system-ui";
-        ctx.fillText(
-          "Highly Esteemed Pastor Kayode Adesina",
-          centerX,
-          textY
-        );
-        textY += 22;
+        ctx.fillText("Highly Esteemed Pastor Kayode Adesina", centerX, textY);
+        textY += lineHeight;
+
         ctx.fillText("Thanksgiving Service", centerX, textY);
 
         const pngUrl = canvas.toDataURL("image/png");
@@ -446,11 +441,6 @@ export default function RsvpPage() {
               </h1>
 
               {/* Combined line requested */}
-              <p
-                className={`${cormorant.className} text-sm sm:text-base text-slate-300`}
-              >
-                Highly Esteemed Pastor Kayode Adesina - Thanksgiving Service
-              </p>
 
               <h1
                 className={`${greatVibes.className} text-center text-2xl text-amber-200 drop-shadow-md`}
