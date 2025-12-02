@@ -67,7 +67,7 @@ export function KingsChatSignIn() {
       ) : (
         <>
           <Image src={logo} alt="Kingschat logo" className="w-8 h-8 mr-2" />
-          Login with KingsChat to RSVP
+          Login with KingsChat
         </>
       )}
     </button>
