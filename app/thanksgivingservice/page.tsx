@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 // @ts-ignore
 import confetti from "canvas-confetti";
 import { KingsChatSignIn } from "../auth/components/KingschatSignIn";
@@ -62,6 +62,9 @@ export default function RsvpPage() {
 
   // QR visibility toggle (hidden by default)
   const [qrVisible, setQrVisible] = useState(false);
+
+  // ref for QR code container (for downloading)
+  const qrRef = useRef<HTMLDivElement | null>(null);
 
   // Load saved attendance from localStorage (if any)
   useEffect(() => {
@@ -302,6 +305,33 @@ export default function RsvpPage() {
     }
   };
 
+  // ✅ Download QR as SVG
+  const handleDownloadQr = () => {
+    if (!qrRef.current) return;
+    const svg = qrRef.current.querySelector("svg");
+    if (!svg) return;
+
+    try {
+      const serializer = new XMLSerializer();
+      const svgStr = serializer.serializeToString(svg);
+      const blob = new Blob([svgStr], {
+        type: "image/svg+xml;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "thanksgiving-qr-code.svg";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download QR code:", err);
+    }
+  };
+
   // ✅ QR can only be shown if:
   //  - user has a token
   //  - attendance is not explicitly "no"
@@ -346,6 +376,13 @@ export default function RsvpPage() {
                 Thanksgiving Service
               </h1>
 
+              {/* NEW: Combined line requested */}
+              <p
+                className={`${cormorant.className} text-sm sm:text-base text-slate-300`}
+              >
+                Highly Esteemed Pastor Kayode Adesina - Thanksgiving Service
+              </p>
+
               <h1
                 className={`${greatVibes.className} text-center text-2xl text-amber-200 drop-shadow-md`}
               >
@@ -370,27 +407,9 @@ export default function RsvpPage() {
                   </p>
                   <p className="text-md text-slate-300">@{user.username}</p>
 
-                  {/* Seat & attendance side by side */}
-                  {/* <div className="mt-3 flex flex-wrap gap-3 text-sm justify-center">
-                    {user.seat && (
-                      <span className="inline-flex items-center rounded-full bg-emerald-900/40 border border-emerald-500/70 px-3 py-1 text-emerald-200">
-                        Seat:{" "}
-                        <span className="ml-1 font-semibold">{user.seat}</span>
-                      </span>
-                    )}
-                    {user.attendance && (
-                      <span className="inline-flex items-center rounded-full bg-slate-800/60 border border-slate-500/70 px-3 py-1 text-slate-100">
-                        Attendance:{" "}
-                        <span className="ml-1 font-semibold">
-                          {user.attendance}
-                        </span>
-                      </span>
-                    )}
-                  </div> */}
-
                   {/* Show/Hide QR button (only if it's allowed at all) */}
                   {canShowQr && (
-                    <div className="mt-4 flex justify-center">
+                    <div className="mt-4 flex justify-center gap-3 flex-wrap">
                       <button
                         type="button"
                         onClick={() => setQrVisible((prev) => !prev)}
@@ -405,7 +424,10 @@ export default function RsvpPage() {
                 {/* Row 2: QR code (own row, only if canShowQr AND user has chosen to show it) */}
                 {canShowQr && qrVisible && (
                   <div className="flex flex-col items-center justify-center">
-                    <div className="bg-white p-3 rounded-2xl max-w-[240px] w-full">
+                    <div
+                      ref={qrRef}
+                      className="bg-white p-3 rounded-2xl max-w-[240px] w-full"
+                    >
                       <QRCode
                         value={user.token}
                         size={220}
@@ -419,6 +441,13 @@ export default function RsvpPage() {
                     <p className="mt-2 text-[0.8rem] text-slate-300 text-center">
                       Present this QR code
                     </p>
+                    <button
+                      type="button"
+                      onClick={handleDownloadQr}
+                      className={`${poppins.className} mt-3 cursor-pointer inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-lg shadow-amber-500/40 transition focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-slate-900`}
+                    >
+                      Download QR Code
+                    </button>
                   </div>
                 )}
 
