@@ -1,6 +1,9 @@
 // app/auth/kingschat/callback/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
+const BASE_URL =
+  process.env.NEXT_PUBLIC_APP_URL || "https://nmt-rsvp.netlify.app";
+
 export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") || "";
@@ -17,18 +20,12 @@ export async function POST(req: NextRequest) {
       accessToken = (form.get("accessToken") as string) ?? null;
       refreshToken = (form.get("refreshToken") as string) ?? null;
     } else {
-      // fallback: try formData anyway
       const form = await req.formData().catch(() => null);
       if (form) {
         accessToken = (form.get("accessToken") as string) ?? null;
         refreshToken = (form.get("refreshToken") as string) ?? null;
       }
     }
-
-    console.log("Incoming KingsChat callback:");
-    console.log("content-type:", contentType);
-    console.log("accessToken present?", !!accessToken);
-    console.log("refreshToken present?", !!refreshToken);
 
     if (!accessToken) {
       console.error("No accessToken in POST body");
@@ -38,11 +35,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Set cookies
-    const res = NextResponse.redirect(
-      new URL("/auth/kingschat/callback", req.url), // will hit page.tsx as GET
-      { status: 303 }
-    );
+    // Always redirect to canonical domain
+    const redirectUrl = `${BASE_URL}/auth/kingschat/callback`;
+
+    const res = NextResponse.redirect(redirectUrl, { status: 303 });
 
     res.cookies.set("kc_access_token", accessToken, {
       httpOnly: true,
