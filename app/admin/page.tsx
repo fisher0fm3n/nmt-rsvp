@@ -23,13 +23,15 @@ const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
 });
 
-// Updated to match new API shape
+// Updated to include id + seat
 type Entry = {
+  id: string; // ensure /api/nmt/pka-thanksgivingservice/all returns this
   name: string;
   username: string;
   email?: string | null;
   attendance?: string | null; // "yes" | "no" | null
   submittedAt?: string; // ISO string
+  seat?: string | null; // "Table 1" - "Table 50" or "Bleachers"
 };
 
 type ApiResponse = {
@@ -41,17 +43,26 @@ type ApiResponse = {
 
 const SESSION_KEY = "rsvp_admin_session"; // { username, password }
 
+// All allowed seat values
+const seatOptions = [
+  ...Array.from({ length: 50 }, (_, i) => `Table ${i + 1}`),
+  "Bleachers",
+];
+
 export default function AdminRsvpPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // global login/refresh loading
   const [restoring, setRestoring] = useState(true); // restoring session on first load
 
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+
+  // Per-entry loading state for seat updates
+  const [seatLoading, setSeatLoading] = useState<Record<string, boolean>>({});
 
   const isAuthed = entries !== null;
 
@@ -276,11 +287,75 @@ export default function AdminRsvpPage() {
     }
   };
 
+  // ---- Seat change handler (auto-set when selected, with per-row loading) ----
+  const handleSeatChange = async (entryId: string, seat: string) => {
+    if (!seat) return; // ignore clearing for now
+
+    setError(null);
+    setApiMessage(null);
+
+    // mark this entry as loading
+    setSeatLoading((prev) => ({ ...prev, [entryId]: true }));
+
+    try {
+      const res = await fetch(
+        "https://pcdl.co/api/nmt/pka-thanksgivingservice/seat",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key":
+              "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
+          },
+          body: JSON.stringify({ id: entryId, seat }),
+        }
+      );
+
+      if (!res.ok) {
+        setError(`Failed to set seat (status ${res.status})`);
+        return;
+      }
+
+      const json = await res.json();
+
+      if (!json.status) {
+        setError(json.message || "Failed to set seat.");
+        return;
+      }
+
+      // ✅ Optimistically update local state with new seat
+      setEntries((prev) =>
+        prev
+          ? prev.map((e) =>
+              e.id === entryId
+                ? {
+                    ...e,
+                    seat: json.data?.seat ?? seat,
+                  }
+                : e
+            )
+          : prev
+      );
+
+      setApiMessage("Seat updated successfully.");
+    } catch (err) {
+      console.error("Error setting seat:", err);
+      setError("Network error while setting seat.");
+    } finally {
+      // clear loading for this entry
+      setSeatLoading((prev) => {
+        const copy = { ...prev };
+        delete copy[entryId];
+        return copy;
+      });
+    }
+  };
+
   // While restoring session and not yet decided, show a simple loading state
   if (restoring && !isAuthed) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900 text-slate-100">
-        <p>Loading admin session…</p>
+        <p className="text-lg">Loading admin session…</p>
       </main>
     );
   }
@@ -288,15 +363,15 @@ export default function AdminRsvpPage() {
   // 🔹 VIEW 1: LOGIN + SIDE BANNER (not authed)
   if (!isAuthed) {
     return (
-      <main className="relative min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900">
+      <main className="relative min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900 text-lg">
         {/* Sparkles/Confetti Canvas */}
         <canvas
           id="sparkles-canvas"
           className="pointer-events-none fixed inset-0 z-0 w-full"
         />
 
-        <div className="text-center relative z-10 w-full max-w-6xl bg-slate-900/60 border border-slate-700/60 rounded-3xl shadow-2xl backdrop-blur-md p-4 sm:p-6 lg:p-8">
-          <div className="flex flex-col gap-8 lg:flex-row items-center">
+        <div className="text-center relative z-10 w-full max-w-7xl bg-slate-900/60 border border-slate-700/60 rounded-3xl shadow-2xl backdrop-blur-md p-5 sm:p-7 lg:p-9">
+          <div className="flex flex-col gap-10 lg:flex-row items-center">
             {/* Invitation / Hero Image */}
             <div className="relative w-full lg:w-1/2">
               <div className="overflow-hidden rounded-2xl shadow-xl border border-slate-700/60">
@@ -310,33 +385,33 @@ export default function AdminRsvpPage() {
             </div>
 
             {/* Right Side: Login */}
-            <div className="flex-1 text-left space-y-6 mt-4 lg:mt-0">
-              <div className="text-center space-y-2">
+            <div className="flex-1 text-left space-y-7 mt-4 lg:mt-0">
+              <div className="text-center space-y-3">
                 <p
-                  className={`${cormorant.className} mt-2 mb-8 text-xs sm:text-sm tracking-[0.25em] uppercase text-slate-400`}
+                  className={`${cormorant.className} mt-2 mb-8 text-sm sm:text-base tracking-[0.25em] uppercase text-slate-400`}
                 >
                   Highly Esteemed Pastor Kayode Adesina
                 </p>
                 <h1
-                  className={`${greatVibes.className} text-center text-3xl sm:text-5xl text-amber-200 drop-shadow-md`}
+                  className={`${greatVibes.className} text-center text-4xl sm:text-6xl text-amber-200 drop-shadow-md`}
                 >
                   Thanksgiving Service
                 </h1>
                 <h2
-                  className={`${cormorant.className} text-center text-xl sm:text-4xl text-blue-300 mt-3`}
+                  className={`${cormorant.className} text-center text-2xl sm:text-5xl text-blue-300 mt-4`}
                 >
                   RSVP Admin
                 </h2>
               </div>
 
-              <section className="space-y-4">
+              <section className="space-y-5">
                 <form
                   onSubmit={handleSubmit}
-                  className="max-w-md mx-auto space-y-4"
+                  className="max-w-md mx-auto space-y-5"
                 >
                   <div className="text-left">
                     <label
-                      className={`${poppins.className} block text-sm text-slate-200 mb-1`}
+                      className={`${poppins.className} block text-base text-slate-200 mb-1.5`}
                       htmlFor="username"
                     >
                       Username
@@ -346,14 +421,14 @@ export default function AdminRsvpPage() {
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full rounded-lg bg-slate-950/60 border border-slate-700/70 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                      className="w-full rounded-lg bg-slate-950/60 border border-slate-700/70 px-4 py-2.5 text-base text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
                       autoComplete="username"
                     />
                   </div>
 
                   <div className="text-left">
                     <label
-                      className={`${poppins.className} block text-sm text-slate-200 mb-1`}
+                      className={`${poppins.className} block text-base text-slate-200 mb-1.5`}
                       htmlFor="password"
                     >
                       Password
@@ -363,25 +438,19 @@ export default function AdminRsvpPage() {
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-lg bg-slate-950/60 border border-slate-700/70 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                      className="w-full rounded-lg bg-slate-950/60 border border-slate-700/70 px-4 py-2.5 text-base text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
                       autoComplete="current-password"
                     />
                   </div>
 
                   {error && (
-                    <p className="text-xs text-red-400 text-center">{error}</p>
-                  )}
-
-                  {apiMessage && !error && (
-                    <p className="text-xs text-emerald-300 text-center">
-                      {apiMessage}
-                    </p>
+                    <p className="text-sm text-red-400 text-center">{error}</p>
                   )}
 
                   <button
                     type="submit"
                     disabled={loading}
-                    className={`${poppins.className} cursor-pointer w-full inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-lg shadow-amber-500/40 transition focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-not-allowed`}
+                    className={`${poppins.className} cursor-pointer w-full inline-flex items-center justify-center rounded-md px-5 py-3 text-base font-semibold bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-lg shadow-amber-500/40 transition focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-not-allowed`}
                   >
                     {loading ? "Signing in…" : "Login to View RSVPs"}
                   </button>
@@ -396,16 +465,16 @@ export default function AdminRsvpPage() {
 
   // 🔹 VIEW 2: FULL-SCREEN TABLE, GRADIENT BG, TOP BLURRED BANNER
   return (
-    <main className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900 px-2 sm:px-4 py-4 sm:py-6">
+    <main className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900 px-3 sm:px-5 py-5 sm:py-7 text-lg">
       <canvas
         id="sparkles-canvas"
         className="pointer-events-none fixed inset-0 z-0 w-full"
       />
 
-      <div className="relative z-10 max-w-6xl mx-auto space-y-6 sm:space-y-8">
+      <div className="relative z-10 max-w-6xl mx-auto space-y-7 sm:space-y-9">
         {/* Top banner */}
         <section className="relative w-full rounded-3xl overflow-hidden border border-slate-700/60 shadow-2xl bg-slate-950/60">
-          <div className="relative h-40 sm:h-52 md:h-64">
+          <div className="relative h-44 sm:h-56 md:h-72">
             <Image
               src={invite}
               alt="Thanksgiving Service Invite"
@@ -415,43 +484,43 @@ export default function AdminRsvpPage() {
             />
             <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/40 to-slate-950/90" />
 
-            <div className="relative z-10 flex flex-col items-start justify-end h-full px-4 sm:px-6 md:px-8 py-4 sm:py-6">
+            <div className="relative z-10 flex flex-col items-start justify-end h-full px-5 sm:px-7 md:px-9 py-5 sm:py-7">
               <p
-                className={`${cormorant.className} font-bold text-sm mb-4 tracking-[0.25em] uppercase text-slate-300`}
+                className={`${cormorant.className} font-bold text-base mb-4 tracking-[0.25em] uppercase text-slate-300`}
               >
                 Highly Esteemed Pastor Kayode Adesina
               </p>
               <h1
-                className={`${greatVibes.className} text-2xl sm:text-4xl md:text-5xl text-amber-200 drop-shadow-md`}
+                className={`${greatVibes.className} text-3xl sm:text-5xl md:text-6xl text-amber-200 drop-shadow-md`}
               >
                 Thanksgiving Service
               </h1>
 
-              <div className="mt-1 w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="mt-2 w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <h2
-                  className={`${cormorant.className} text-lg sm:text-2xl md:text-3xl text-emerald-300`}
+                  className={`${cormorant.className} text-xl sm:text-3xl md:text-4xl text-emerald-300`}
                 >
                   RSVP Admin Dashboard
                 </h2>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <button
                     onClick={handleRefresh}
                     disabled={loading}
-                    className={`${poppins.className} text-sm cursor-pointer px-3 py-1 rounded-md bg-slate-200/90 hover:bg-white text-slate-900 font-semibold shadow disabled:opacity-60 disabled:cursor-not-allowed`}
+                    className={`${poppins.className} text-base cursor-pointer px-4 py-2 rounded-md bg-slate-200/90 hover:bg-white text-slate-900 font-semibold shadow disabled:opacity-60 disabled:cursor-not-allowed`}
                   >
                     {loading ? "Refreshing…" : "Refresh"}
                   </button>
                   <button
                     onClick={handleLogout}
-                    className={`${poppins.className} text-sm cursor-pointer px-3 py-1 rounded-md bg-red-500/80 hover:bg-red-400 text-slate-900 font-semibold shadow`}
+                    className={`${poppins.className} text-base cursor-pointer px-4 py-2 rounded-md bg-red-500/80 hover:bg-red-400 text-slate-900 font-semibold shadow`}
                   >
                     Logout
                   </button>
                 </div>
               </div>
 
-              <p className="mt-2 text-[1rem] text-slate-200 max-w-md">
+              <p className="mt-3 text-[1.125rem] text-slate-200 max-w-md">
                 View and manage all registered attendees for the Thanksgiving
                 Service.
               </p>
@@ -459,76 +528,158 @@ export default function AdminRsvpPage() {
           </div>
         </section>
 
-        {/* Table section */}
-        <section className="space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+        {/* Table / List section */}
+        <section className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div>
               <h3
-                className={`${cormorant.className} text-xl sm:text-[2rem] text-amber-200 font-semibold`}
+                className={`${cormorant.className} text-2xl sm:text-[2.25rem] text-amber-200 font-semibold`}
               >
                 RSVP Entries
               </h3>
-              {apiMessage && (
-                <p className="text-xs sm:text-[1rem] text-slate-200 mt-1">
-                  {apiMessage}
-                </p>
-              )}
-              {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+              {error && <p className="text-sm text-red-400 mt-1">{error}</p>}
             </div>
-            <p className="text-sm text-slate-300">
+            <p className="text-base text-slate-300">
               Showing {entries?.length ?? 0} of{" "}
               {totalCount ?? entries?.length ?? 0} entries
             </p>
           </div>
 
-          <div className="w-full overflow-x-auto rounded-xl border border-slate-700/60 bg-slate-950/70">
-            <table className="min-w-full text-left text-sm sm:text-md text-slate-100">
-              <thead className="bg-slate-950/90 text-md">
-                <tr>
-                  <th className="px-3 py-2 sm:px-4 sm:py-3 font-semibold">
-                    Name
-                  </th>
-                  <th className="px-3 py-2 sm:px-4 sm:py-3 font-semibold">
-                    Username
-                  </th>
-                  <th className="px-3 py-2 sm:px-4 sm:py-3 font-semibold">
-                    Email
-                  </th>
-                  <th className="px-3 py-2 sm:px-4 sm:py-3 font-semibold">
-                    Attendance
-                  </th>
-                  <th className="px-3 py-2 sm:px-4 sm:py-3 font-semibold whitespace-nowrap">
-                    Submitted At
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="text-[1rem]">
-                {entries!.map((entry, idx) => (
-                  <tr
-                    key={`${entry.username}-${idx}`}
-                    className={
-                      idx % 2 === 0 ? "bg-slate-900/60" : "bg-slate-900/30"
-                    }
-                  >
-                    <td className="px-3 py-2 sm:px-4 sm:py-3 whitespace-nowrap">
-                      {entry.name}
-                    </td>
-                    <td className="px-3 py-2 sm:px-4 sm:py-3 whitespace-nowrap">
-                      {entry.username}
-                    </td>
-                    <td className="px-3 py-2 sm:px-4 sm:py-3 whitespace-nowrap">
-                      {entry.email ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 sm:px-4 sm:py-3 whitespace-nowrap">
-                      {formatAttendance(entry.attendance)}
-                    </td>
-                    <td className="px-3 py-2 sm:px-4 sm:py-3 whitespace-nowrap">
-                      {formatSubmittedAt(entry.submittedAt)}
-                    </td>
+          {/* 📱 MOBILE: Card list (no horizontal scroll) */}
+          <div className="space-y-3 md:hidden">
+            {entries!.map((entry, idx) => {
+              const thisRowLoading = !!seatLoading[entry.id];
+              return (
+                <div
+                  key={`${entry.id}-${idx}`}
+                  className="rounded-2xl border border-slate-700/70 bg-slate-950/80 p-4 flex flex-col gap-2"
+                >
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    <div>
+                      <p className="font-semibold text-slate-50 text-lg">
+                        {entry.name}
+                      </p>
+                      <p className="text-slate-300 text-base">
+                        @{entry.username}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-base font-bold text-slate-200">
+                    Attendance Status: {formatAttendance(entry.attendance)}
+                  </p>
+
+                  <div className="flex flex-col gap-2 mt-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-slate-300 text-base">Seat</span>
+                      <div className="flex items-center gap-3">
+                        <select
+                          className="bg-slate-900 border border-slate-600 rounded-md px-3 py-2 text-base text-slate-100"
+                          value={entry.seat ?? ""}
+                          onChange={(e) =>
+                            handleSeatChange(entry.id, e.target.value)
+                          }
+                          disabled={thisRowLoading || loading}
+                        >
+                          <option value="">—</option>
+                          {seatOptions.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                        {thisRowLoading && (
+                          <span className="inline-flex h-5 w-5 items-center justify-center">
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-slate-400 text-sm">
+                      Submitted: {formatSubmittedAt(entry.submittedAt)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 💻 DESKTOP/TABLET: Table view */}
+          <div className="hidden md:block">
+            <div className="w-full overflow-x-auto rounded-xl border border-slate-700/60 bg-slate-950/70">
+              <table className="min-w-full text-left text-base sm:text-lg text-slate-100">
+                <thead className="bg-slate-950/90 text-lg">
+                  <tr>
+                    <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold">
+                      Name
+                    </th>
+                    <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold">
+                      Username
+                    </th>
+                    <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold">
+                      Attendance
+                    </th>
+                    <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">
+                      Seat
+                    </th>
+                    <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">
+                      Submitted At
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="text-[1.1rem]">
+                  {entries!.map((entry, idx) => {
+                    const thisRowLoading = !!seatLoading[entry.id];
+                    return (
+                      <tr
+                        key={`${entry.id ?? entry.username}-${idx}`}
+                        className={
+                          idx % 2 === 0 ? "bg-slate-900/60" : "bg-slate-900/30"
+                        }
+                      >
+                        <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
+                          {entry.name}
+                        </td>
+                        <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
+                          {entry.username}
+                        </td>
+                        <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
+                          {formatAttendance(entry.attendance)}
+                        </td>
+                        <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <select
+                              className="bg-slate-900 border border-slate-600 rounded-md px-3 py-2 text-base text-slate-100"
+                              value={entry.seat ?? ""}
+                              onChange={(e) =>
+                                handleSeatChange(entry.id, e.target.value)
+                              }
+                              disabled={thisRowLoading || loading}
+                            >
+                              <option value="">—</option>
+                              {seatOptions.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                            {thisRowLoading && (
+                              <span className="inline-flex h-5 w-5 items-center justify-center">
+                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" />
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
+                          {formatSubmittedAt(entry.submittedAt)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       </div>

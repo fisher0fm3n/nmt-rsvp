@@ -2,8 +2,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-const BASE_ORIGIN =
-  process.env.NEXT_PUBLIC_BASE_URL || "https://nmt-rsvp.netlify.app";
+const BASE_ORIGIN = "https://nmt-rsvp.netlify.app";
+  // const BASE_ORIGIN = "http://localhost:3000";
 
 const BASE_SUCCESS_PATH = "/rsvp/success";
 const BASE_ERROR_PATH = "/rsvp/error";
@@ -15,13 +15,6 @@ export default async function KingsChatCallbackPage() {
 
   // Read attendance from cookie set on the RSVP page
   const attendance = cookieStore.get("attendanceResponse")?.value ?? null;
-
-  // if (!accessToken) {
-  //   console.error(
-  //     "KingsChat callback page: no kc_access_token cookie found"
-  //   );
-  //   redirect(`${BASE_ORIGIN}${BASE_ERROR_PATH}/Err1`);
-  // }
 
   // 1) Fetch KingsChat profile using the access token
   const kcResp = await fetch(
@@ -35,14 +28,6 @@ export default async function KingsChatCallbackPage() {
       cache: "no-store",
     }
   );
-
-  // if (!kcResp.ok) {
-  //   console.error(
-  //     "KingsChat profile request failed on callback page:",
-  //     kcResp.status
-  //   );
-  //   redirect(`${BASE_ORIGIN}${BASE_ERROR_PATH}/Err2`);
-  // }
 
   const profileJson = await kcResp.json();
   const kcProfile = profileJson?.profile;
@@ -70,7 +55,6 @@ export default async function KingsChatCallbackPage() {
         name: kcProfile.name,
         username: kcProfile.username,
         email: kcProfile.email,
-        attendance, // <- passes yes/no (or null if not set)
       }),
       cache: "no-store",
     }
