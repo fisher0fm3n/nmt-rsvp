@@ -47,6 +47,8 @@ type MenuPayload = {
   swallow: string | null;
   dessert: string | null;
   afters: string | null;
+  riceType?: string | null;
+  protein?: string | null;
 };
 
 const starterOptions: MenuOption[] = [
@@ -83,6 +85,7 @@ const continentalMainOptions: MenuOption[] = [
 ];
 
 const LOCAL_SOUP_MAIN_ID = "local-soup-main";
+const JOLLOF_FRIED_MAIN_ID = "jollof-fried-rice-chicken-fish";
 
 const localSoupMainOption: MenuOption = {
   id: LOCAL_SOUP_MAIN_ID,
@@ -116,6 +119,18 @@ const otherLocalMainOptions: MenuOption[] = [
   },
 ];
 
+const riceTypeOptions: MenuOption[] = [
+  { id: "jollof-rice", label: "Jollof Rice" },
+  { id: "fried-rice", label: "Fried Rice" },
+];
+
+const proteinOptions: MenuOption[] = [
+  { id: "chicken", label: "Chicken" },
+  { id: "fish", label: "Fish" },
+  { id: "moinmoin", label: "Moinmoin" },
+  { id: "coleslaw", label: "Coleslaw" },
+];
+
 const dessertOptions: MenuOption[] = [
   { id: "ice-cream", label: "Ice Cream" },
   { id: "cup-cakes", label: "Cup Cakes" },
@@ -139,6 +154,8 @@ export default function MenuSelectionPage() {
   const [swallow, setSwallow] = useState<string>("");
   const [dessert, setDessert] = useState<string>("");
   const [afters, setAfters] = useState<string>("");
+  const [riceType, setRiceType] = useState<string>("");
+  const [protein, setProtein] = useState<string>("");
 
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -146,6 +163,7 @@ export default function MenuSelectionPage() {
   const [countdown, setCountdown] = useState(5);
 
   const isLocalSoupMain = mainCourse === LOCAL_SOUP_MAIN_ID;
+  const isJollofFriedMain = mainCourse === JOLLOF_FRIED_MAIN_ID;
 
   // If user is not logged in, go back home
   useEffect(() => {
@@ -196,6 +214,8 @@ export default function MenuSelectionPage() {
           setSwallow(menu.swallow || "");
           setDessert(menu.dessert || "");
           setAfters(menu.afters || "");
+          setRiceType(menu.riceType || "");
+          setProtein(menu.protein || "");
         }
       } catch (err) {
         console.error("Error fetching profile/menu:", err);
@@ -233,6 +253,10 @@ export default function MenuSelectionPage() {
       setLocalSoup("");
       setSwallow("");
     }
+    if (value !== JOLLOF_FRIED_MAIN_ID) {
+      setRiceType("");
+      setProtein("");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -255,6 +279,13 @@ export default function MenuSelectionPage() {
       return;
     }
 
+    if (isJollofFriedMain && (!riceType || !protein)) {
+      alert(
+        "For the Jollof/Fried Rice option, please select your rice type and one option (Chicken, Fish, Moinmoin or Coleslaw)."
+      );
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -268,7 +299,6 @@ export default function MenuSelectionPage() {
               "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
           },
           body: JSON.stringify({
-            // 🔁 Use name instead of id as requested
             id: user.id,
             starter: starter || null,
             salad: salad || null,
@@ -277,6 +307,8 @@ export default function MenuSelectionPage() {
             swallow: isLocalSoupMain ? swallow || null : null,
             dessert: dessert || null,
             afters: afters || null,
+            riceType: isJollofFriedMain ? (riceType || null) : null,
+            protein: isJollofFriedMain ? (protein || null) : null,
           }),
         }
       );
@@ -511,6 +543,59 @@ export default function MenuSelectionPage() {
                       >
                         <option value="">Select one</option>
                         {swallowOptions.map((opt) => (
+                          <option key={opt.id} value={opt.id}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Extra dropdowns when Jollof/Fried Rice option is chosen */}
+                {isJollofFriedMain && (
+                  <div className="mt-3 space-y-3">
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="riceType"
+                        className={`${poppins.className} text-xs text-slate-200`}
+                      >
+                        Rice (choose one){" "}
+                        <span className="text-red-400">*</span>
+                      </label>
+                      <select
+                        id="riceType"
+                        className={fieldClass}
+                        value={riceType}
+                        onChange={(e) => setRiceType(e.target.value)}
+                        disabled={isDisabled}
+                      >
+                        <option value="">Select rice type</option>
+                        {riceTypeOptions.map((opt) => (
+                          <option key={opt.id} value={opt.id}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="protein"
+                        className={`${poppins.className} text-xs text-slate-200`}
+                      >
+                        With (Chicken / Fish / Moinmoin / Coleslaw){" "}
+                        <span className="text-red-400">*</span>
+                      </label>
+                      <select
+                        id="protein"
+                        className={fieldClass}
+                        value={protein}
+                        onChange={(e) => setProtein(e.target.value)}
+                        disabled={isDisabled}
+                      >
+                        <option value="">Select one</option>
+                        {proteinOptions.map((opt) => (
                           <option key={opt.id} value={opt.id}>
                             {opt.label}
                           </option>
