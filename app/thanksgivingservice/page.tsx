@@ -474,7 +474,7 @@ export default function RsvpPage() {
                   <p className="text-md text-slate-300">@{user.username}</p>
 
                   {/* Show/Hide QR button */}
-                  {canShowQr && (
+                  {/* {canShowQr && (
                     <div className="mt-4 flex justify-center gap-3 flex-wrap">
                       <button
                         type="button"
@@ -484,11 +484,11 @@ export default function RsvpPage() {
                         {qrVisible ? "Hide QR Code" : "Show QR Code"}
                       </button>
                     </div>
-                  )}
+                  )} */}
                 </div>
 
                 {/* Row 2: QR code + download (only if visible) */}
-                {canShowQr && qrVisible && (
+                {/* {canShowQr && qrVisible && (
                   <div className="flex flex-col items-center justify-center">
                     <div
                       ref={qrRef}
@@ -515,7 +515,7 @@ export default function RsvpPage() {
                       Download QR Code
                     </button>
                   </div>
-                )}
+                )} */}
 
                 <div className="mt-2 flex flex-col space-y-4 border-t border-slate-700/70 pt-4">
                   <h1>Menu</h1>
