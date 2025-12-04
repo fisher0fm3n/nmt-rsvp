@@ -475,8 +475,8 @@ export default function RsvpPage() {
                   {user.seat && (
                     <div className="mt-3 flex justify-center mb-3">
                       <span className="inline-flex items-center rounded-full border border-amber-300/70 bg-amber-300/10 px-4 py-1 text-xs font-medium tracking-[0.15em] text-amber-200">
-                        Seat: &nbsp;
-                        <span className="ml-1 font-semibold">{user.seat}</span>
+                        <span className="ml-1 font-semibold">Seat: </span>
+                        {user.seat}
                       </span>
                     </div>
                   )}
