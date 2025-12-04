@@ -473,9 +473,9 @@ export default function RsvpPage() {
                   </p>
 
                   {user.seat && (
-                    <div className="flex justify-center my-6">
-                      <span className="inline-flex items-center rounded-full border border-amber-300/70 bg-amber-300/10 px-4 py-1 text-xl font-medium text-amber-200">
-                        <span className="ml-1 font-semibold mr-1">Seat: </span>
+                    <div className="mt-3 flex justify-center mb-3">
+                      <span className="inline-flex items-center rounded-full border border-amber-300/70 bg-amber-300/10 px-4 py-1 text-xs font-medium tracking-[0.15em] text-amber-200">
+                        <span className="ml-1 font-semibold">Seat: </span>
                         {user.seat}
                       </span>
                     </div>
@@ -527,7 +527,7 @@ export default function RsvpPage() {
                   </div>
                 )} */}
 
-                {/* <div className="mt-2 flex flex-col space-y-4 border-t border-slate-700/70 pt-4">
+                <div className="mt-2 flex flex-col space-y-4 border-t border-slate-700/70 pt-4">
                   <h1>Menu</h1>
                   <Link
                     href={"/thanksgivingservice/menu"}
@@ -535,7 +535,7 @@ export default function RsvpPage() {
                   >
                     Select your meal options
                   </Link>
-                </div> */}
+                </div>
 
                 {/* Row 3: Edit form + logout */}
                 <form
