@@ -8,7 +8,7 @@ import React, {
   ChangeEvent,
 } from "react";
 
-// ==== Types (ported from your Expo code) ====
+// ==== Types ====
 
 type ApiMenu = {
   starter?: string | null;
@@ -64,7 +64,7 @@ const ESC_POS_WIDTH_COMMANDS: Record<string, Uint8Array> = {
 
 const TICKET_WIDTH_MM = 72;
 
-// HTML ticket (if you ever want browser print); currently for reference
+// HTML ticket (for reference only)
 function buildTicketHtml(user: ApiUser): string {
   const safeName = user.name ?? "Guest";
   const safeSeat = user.seat ? `Seat: ${user.seat}` : "Seat: Unassigned";
@@ -308,6 +308,9 @@ export default function ScanPage() {
     } catch (err: any) {
       console.error(err);
       setPrinterStatus("Failed to select printer: " + err.message);
+    } finally {
+      // 🔑 Ensure scanner input regains focus after printer selection
+      requestAnimationFrame(() => inputRef.current?.focus());
     }
   };
 
@@ -322,10 +325,12 @@ export default function ScanPage() {
     } catch (err: any) {
       console.error(err);
       setPrinterStatus("Error disconnecting printer: " + err.message);
+    } finally {
+      requestAnimationFrame(() => inputRef.current?.focus());
     }
   };
 
-  // ==== Print flow (this is the "fire this command" part) ====
+  // ==== Print flow ====
 
   const handlePrint = useCallback(async () => {
     if (!apiUser || printing) return;
@@ -343,7 +348,7 @@ export default function ScanPage() {
 
     setPrinting(true);
     try {
-      // 1. Call your API to register the print (same as Expo code)
+      // 1. Call your API to register the print
       const res = await fetch(
         "https://pcdl.co/api/nmt/pka-thanksgivingservice/print",
         {
@@ -478,7 +483,7 @@ export default function ScanPage() {
             <span style={{ fontSize: 12 }}>Select Printer</span>
           </button>
 
-          <div style={{ fontSize: 10, maxWidth: 200, textAlign: "right" }}>
+          <div style={{ fontSize: 10, maxWidth: 220, textAlign: "right" }}>
             {printerStatus}
           </div>
 
@@ -627,7 +632,6 @@ export default function ScanPage() {
 
           <button
             onClick={() => {
-              // simple "Home" – in a full app you'd use next/navigation's useRouter
               window.location.href = "/";
             }}
             style={{
