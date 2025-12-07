@@ -294,7 +294,7 @@ export default function MenuSelectionPage() {
   const isPoundedSideDish =
     mainCourse === LOCAL_EFO_ID || mainCourse === LOCAL_SEAFOOD_OKRO_ID;
 
-  // If user is not logged in, go back home
+  // If user is not logged in, go back home up
   useEffect(() => {
     if (!user) {
       router.replace("/menu/dec7th");
