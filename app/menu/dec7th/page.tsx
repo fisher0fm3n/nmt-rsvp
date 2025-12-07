@@ -80,8 +80,8 @@ export default function RsvpPage() {
     }
 
     setUser(authUser);
-    setFormName(authUser.name || "");
-    setFormAttendance(authUser.attendance || "");
+    setFormName((prev) => prev || authUser.name || "");
+    setFormAttendance((prev) => prev || authUser.attendance || "");
     setQrVisible(false);
   }, [authUser]);
 
@@ -128,7 +128,7 @@ export default function RsvpPage() {
         if (cancelled) return;
 
         setUser(refreshedUser);
-        setFormName(refreshedUser.name || "");
+        setFormName((prev) => prev || refreshedUser.name || "");
         setFormAttendance(refreshedUser.attendance || "");
         setQrVisible(false);
 
@@ -268,6 +268,9 @@ export default function RsvpPage() {
       }
 
       setUser(updatedUser);
+
+      setFormName(updatedUser.name || "");
+      setFormAttendance(updatedUser.attendance || "");
 
       if (typeof window !== "undefined") {
         try {
@@ -457,7 +460,7 @@ export default function RsvpPage() {
                         id="name"
                         type="text"
                         value={formName}
-                        onChange={(e) => setFormName(e.target_value)}
+                        onChange={(e) => setFormName(e.target.value)}
                         className="w-full rounded-md border border-amber-200 bg-white/70 px-3 py-2 text-md text-neutral-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
                       />
                     </div>

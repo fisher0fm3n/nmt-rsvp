@@ -295,11 +295,11 @@ export default function MenuSelectionPage() {
     mainCourse === LOCAL_EFO_ID || mainCourse === LOCAL_SEAFOOD_OKRO_ID;
 
   // If user is not logged in, go back home
-  // useEffect(() => {
-  //   if (!user) {
-  //     router.replace("/menu/dec7th");
-  //   }
-  // }, [user, router]);
+  useEffect(() => {
+    if (!user) {
+      router.replace("/menu/dec7th");
+    }
+  }, [user, router]);
 
   // Clear everything (no defaults) – used when no saved menu or on errors
   const setDefaultsIfEmpty = () => {
