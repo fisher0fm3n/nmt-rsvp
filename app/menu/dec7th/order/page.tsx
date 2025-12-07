@@ -653,11 +653,11 @@ export default function MenuSelectionPage() {
             >
               🎉 Your menu selections have been saved successfully!
             </p>
-            <p className="text-xs text-emerald-800/80 mt-1">
+            {/* <p className="text-xs text-emerald-800/80 mt-1">
               You will be redirected to the main page in{" "}
               <span className="font-semibold">{countdown}</span>{" "}
               second{countdown === 1 ? "" : "s"}.
-            </p>
+            </p> */}
           </div>
         )}
 
