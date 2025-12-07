@@ -4,7 +4,6 @@ import { useEffect, useState, FormEvent } from "react";
 import Image from "next/image";
 // @ts-ignore
 import confetti from "canvas-confetti";
-import invite from "../assets/images/invitationnew.jpg";
 import { Great_Vibes, Cormorant_Garamond, Poppins } from "next/font/google";
 
 const greatVibes = Great_Vibes({
@@ -23,7 +22,7 @@ const poppins = Poppins({
 });
 
 // ─────────────────────────────────────────────
-// Menu option definitions + label maps
+// Menu option definitions + label maps (NEW MENU)
 // ─────────────────────────────────────────────
 
 type MenuOption = {
@@ -31,17 +30,101 @@ type MenuOption = {
   label: string;
 };
 
+/**
+ * FIRST COURSE | ARTISANAL SOUPS
+ */
 const starterOptions: MenuOption[] = [
+  // New menu
+  {
+    id: "velvety-carrot-coconut-soup",
+    label: "Velvety Roasted Carrot & Coconut Soup",
+  },
+  {
+    id: "traditional-chicken-pepper-soup",
+    label: "Traditional Chicken Pepper Soup",
+  },
+  // Legacy (old menu) – kept for backward compatibility
   { id: "goat-pepper-soup", label: "Goat Meat Pepper Soup" },
   { id: "chicken-soup", label: "Chicken Soup" },
 ];
 
+/**
+ * SECOND COURSE | HORS D’ŒUVRES
+ */
+const horsDoeuvreOptions: MenuOption[] = [
+  { id: "golden-puff-puffs", label: "Golden Puff-Puffs" },
+  { id: "vegetable-spring-rolls", label: "Vegetable Spring Rolls" },
+  { id: "beef-samosas", label: "Beef Samosas" },
+  { id: "plantain-puffies-mosa", label: "Plantain Puffies (Mosa)" },
+  {
+    id: "chargrilled-bbq-chicken-wings",
+    label: "Chargrilled Barbecued Chicken Wings",
+  },
+  { id: "peppered-gizzard", label: "Peppered Gizzard" },
+  {
+    id: "peppered-mini-beef-kebab",
+    label: "Peppered Mini Beef Kebab",
+  },
+  { id: "peppered-snail", label: "Peppered Snail" },
+];
+
+/**
+ * THIRD COURSE | SALAD MASTERPIECE
+ */
 const saladOptions: MenuOption[] = [
+  {
+    id: "summer-salad-medley",
+    label: "Summer Salad Medley",
+  },
+  // Legacy
   { id: "waldorf-salad", label: "Waldorf Salad" },
   { id: "chicken-salad", label: "Chicken Salad" },
 ];
 
+/**
+ * FOURTH COURSE | MAIN COURSE (ORIENTAL / CONTINENTAL / LOCAL)
+ */
+
+// Oriental – each line is an individual option
+const orientalMainOptions: MenuOption[] = [
+  {
+    id: "oriental-singapore-noodles",
+    label: "Singapore Vermicelli Noodles",
+  },
+  {
+    id: "oriental-special-fried-rice",
+    label: "Special Oriental Fried Rice",
+  },
+  {
+    id: "oriental-chinese-rice",
+    label: "Chinese Rice",
+  },
+  {
+    id: "oriental-chicken-green-herb-sauce",
+    label: "Chicken In Green Herbs Sauce with Seasonal Vegetables",
+  },
+  {
+    id: "oriental-shredded-beef-oyster-sauce",
+    label: "Shredded Beef with Green Peppers in Oyster Sauce",
+  },
+  {
+    id: "oriental-king-prawn-chilli-sauce",
+    label: "King Prawn in Chilli Sauce",
+  },
+];
+
+// Continental
 const continentalMainOptions: MenuOption[] = [
+  {
+    id: "continental-creamy-tuscan-chicken",
+    label: "Creamy Tuscan Chicken with Mashed Potatoes & Rainbow Carrots",
+  },
+  {
+    id: "continental-grilled-sweet-potato-aubergine",
+    label:
+      "Grilled Sweet Potato & Smoky Aubergines with Seasonal Vegetables",
+  },
+  // Legacy mains
   {
     id: "grilled-fillet-steak",
     label: "Grilled Fillet Steak with Mushroom Sauce",
@@ -64,54 +147,116 @@ const continentalMainOptions: MenuOption[] = [
   },
 ];
 
-const LOCAL_SOUP_MAIN_ID = "local-soup-main";
-const JOLLOF_FRIED_MAIN_ID = "jollof-fried-rice-chicken-fish";
+// Local IDs (new menu)
+const LOCAL_JOLLOF_ID = "local-smoky-jollof-or-fried-rice";
+const LOCAL_OFADA_ID = "local-ofada-rice-designer-sauce";
+const LOCAL_YAM_PORRIDGE_ID = "local-yam-sweet-potato-porridge";
+const LOCAL_AMALA_ID = "local-amala-station";
+const LOCAL_EFO_ID = "local-efo-riro";
+const LOCAL_SEAFOOD_OKRO_ID = "local-seafood-okro";
 
-const localSoupMainOption: MenuOption = {
-  id: LOCAL_SOUP_MAIN_ID,
-  label: "Efo Riro / Mixed Okro / Afang / Edikaikong",
-};
+// Legacy local combo ids
+const LEGACY_LOCAL_SOUP_MAIN_ID = "local-soup-main";
+const LEGACY_JOLLOF_FRIED_MAIN_ID = "jollof-fried-rice-chicken-fish";
 
-const localSoupOptions: MenuOption[] = [
-  { id: "efo-riro", label: "Efo Riro" },
-  { id: "mixed-okro", label: "Mixed Okro" },
-  { id: "afang", label: "Afang" },
-  { id: "edikaikong", label: "Edikaikong" },
-];
-
-const swallowOptions: MenuOption[] = [
-  { id: "semo", label: "Semo" },
-  { id: "poundo-yam", label: "Poundo Yam" },
-];
-
-const otherLocalMainOptions: MenuOption[] = [
+const localMainOptions: MenuOption[] = [
+  {
+    id: LOCAL_JOLLOF_ID,
+    label:
+      "Smoky Jollof or Fried Rice with Stewed Chicken/Beef/Fresh Fish, Plantain & Moinmoin",
+  },
+  {
+    id: LOCAL_OFADA_ID,
+    label: "Ofada Rice with ‘Designer’ Sauce",
+  },
+  {
+    id: LOCAL_YAM_PORRIDGE_ID,
+    label:
+      "Yam & Sweet Potato Porridge with Stewed Chicken/Beef/Fresh Fish",
+  },
+  {
+    id: LOCAL_AMALA_ID,
+    label:
+      "Live Amala Station with Bean Purée and Jute Mallow Soup (Yam Flour)",
+  },
+  {
+    id: LOCAL_EFO_ID,
+    label:
+      "Efo Riro Soup with Assorted Meats, Snails & Stockfish (Served with Pounded Yam or Plantain Meal)",
+  },
+  {
+    id: LOCAL_SEAFOOD_OKRO_ID,
+    label: "Seafood Okro Soup (Served with Pounded Yam or Plantain Meal)",
+  },
+  // Legacy local mains – still supported for older data
+  {
+    id: LEGACY_LOCAL_SOUP_MAIN_ID,
+    label: "Efo Riro / Mixed Okro / Afang / Edikaikong (Legacy Combo)",
+  },
   {
     id: "amala-ewedu-gbegiri",
-    label: "Amala with Ewedu and Gbegiri",
+    label: "Amala with Ewedu and Gbegiri (Legacy)",
   },
   {
     id: "ofada-rice",
-    label: "Ofada Rice with Ofada Sauce and Plantain",
+    label: "Ofada Rice with Ofada Sauce and Plantain (Legacy)",
   },
   {
-    id: "jollof-fried-rice-chicken-fish",
-    label: "Jollof/Fried Rice with Chicken, Fish, Moinmoin, Coleslaw",
+    id: LEGACY_JOLLOF_FRIED_MAIN_ID,
+    label:
+      "Jollof/Fried Rice with Chicken, Fish, Moinmoin, Coleslaw (Legacy)",
   },
 ];
 
+/**
+ * Extra choice options (Jollof vs Fried, protein, swallow)
+ */
 const riceTypeOptions: MenuOption[] = [
-  { id: "jollof-rice", label: "Jollof Rice" },
+  { id: "smoky-jollof-rice", label: "Smoky Jollof Rice" },
   { id: "fried-rice", label: "Fried Rice" },
+  // Legacy
+  { id: "jollof-rice", label: "Jollof Rice" },
 ];
 
 const proteinOptions: MenuOption[] = [
   { id: "chicken", label: "Chicken" },
+  { id: "beef", label: "Beef" },
+  { id: "fresh-fish", label: "Fresh Fish" },
+  // Legacy
   { id: "fish", label: "Fish" },
   { id: "moinmoin", label: "Moinmoin" },
   { id: "coleslaw", label: "Coleslaw" },
 ];
 
+const swallowOptions: MenuOption[] = [
+  { id: "pounded-yam", label: "Pounded Yam" },
+  { id: "plantain-meal", label: "Plantain Meal" },
+  // Legacy
+  { id: "semo", label: "Semo" },
+  { id: "poundo-yam", label: "Poundo Yam" },
+];
+
+/**
+ * DESSERT + AFTERS
+ */
 const dessertOptions: MenuOption[] = [
+  {
+    id: "vanilla-gelato-red-velvet-cake",
+    label: "Madagascar Vanilla Gelato with Red Velvet Cake",
+  },
+  {
+    id: "vanilla-gelato-chocolate-cake",
+    label: "Madagascar Vanilla Gelato with Chocolate Cake",
+  },
+  {
+    id: "salted-caramel-gelato-red-velvet-cake",
+    label: "Salted Caramel Gelato with Red Velvet Cake",
+  },
+  {
+    id: "salted-caramel-gelato-chocolate-cake",
+    label: "Salted Caramel Gelato with Chocolate Cake",
+  },
+  // Legacy
   { id: "ice-cream", label: "Ice Cream" },
   { id: "cup-cakes", label: "Cup Cakes" },
   { id: "parfait", label: "Parfait" },
@@ -119,6 +264,19 @@ const dessertOptions: MenuOption[] = [
 ];
 
 const aftersOptions: MenuOption[] = [
+  {
+    id: "exotic-fruit-medley",
+    label: "Exotic Fruit Medley (Tropical Fruit Fusion)",
+  },
+  {
+    id: "roselle-tea-and-cookies",
+    label: "Roselle Tea with Delicate Cookies",
+  },
+  {
+    id: "luxe-midnight-snack-pack",
+    label: "Luxe Midnight Treat – Gourmet Midnight Snack Pack",
+  },
+  // Legacy
   { id: "small-chops", label: "Small Chops" },
   { id: "fries", label: "Fries" },
 ];
@@ -130,13 +288,20 @@ const buildLabelMap = (options: MenuOption[]) =>
   }, {} as Record<string, string>);
 
 const starterLabelMap = buildLabelMap(starterOptions);
+const horsDoeuvreLabelMap = buildLabelMap(horsDoeuvreOptions);
 const saladLabelMap = buildLabelMap(saladOptions);
 const mainCourseLabelMap = buildLabelMap([
+  ...orientalMainOptions,
   ...continentalMainOptions,
-  localSoupMainOption,
-  ...otherLocalMainOptions,
+  ...localMainOptions,
 ]);
-const localSoupLabelMap = buildLabelMap(localSoupOptions);
+const localSoupLabelMap = {
+  // Only for legacy local-soup-main payload
+  "efo-riro": "Efo Riro",
+  "mixed-okro": "Mixed Okro",
+  afang: "Afang",
+  edikaikong: "Edikaikong",
+};
 const swallowLabelMap = buildLabelMap(swallowOptions);
 const riceTypeLabelMap = buildLabelMap(riceTypeOptions);
 const proteinLabelMap = buildLabelMap(proteinOptions);
@@ -151,17 +316,18 @@ type Menu = {
   starter: string | null;
   salad: string | null;
   mainCourse: string; // id
-  localSoup: string | null;
-  swallow: string | null;
+  localSoup: string | null; // legacy only
+  swallow: string | null; // pounded yam / plantain meal etc (or legacy)
   dessert: string | null;
   afters: string | null;
   riceType: string | null;
   protein: string | null;
+  horsDoeuvres?: string[] | null; // NEW: second course (array of ids)
 };
 
 // Updated to include id + seat + menu
 type Entry = {
-  id: string; // ensure /api/nmt/pka-thanksgivingservice/all returns this
+  id: string;
   name: string;
   username: string;
   email?: string | null;
@@ -199,6 +365,13 @@ const formatMenuId = (
 const formatMainCourse = (menu?: Menu | null) => {
   if (!menu) return "—";
   return formatMenuId(menu.mainCourse, mainCourseLabelMap);
+};
+
+const formatHorsDoeuvres = (ids?: string[] | null) => {
+  if (!ids || !ids.length) return "—";
+  return ids
+    .map((id) => formatMenuId(id, horsDoeuvreLabelMap))
+    .join(", ");
 };
 
 export default function AdminRsvpPage() {
@@ -259,22 +432,19 @@ export default function AdminRsvpPage() {
     try {
       setLoading(true);
 
-      const res = await fetch(
-        "https://pcdl.co/api/nmt/pka-thanksgivingservice/all",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key":
-              "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
-          },
-          body: JSON.stringify({
-            username: trimmedUser,
-            password: trimmedPass,
-          }),
-          cache: "no-store",
-        }
-      );
+      const res = await fetch("https://pcdl.co/api/nmt/rsvp/all", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key":
+            "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
+        },
+        body: JSON.stringify({
+          username: trimmedUser,
+          password: trimmedPass,
+        }),
+        cache: "no-store",
+      });
 
       if (!res.ok) {
         setError(`Request failed with status ${res.status}`);
@@ -506,7 +676,7 @@ export default function AdminRsvpPage() {
     }
   };
 
-  // ---- Export menu table to CSV ----
+  // ---- Export menu table to CSV (including new second course & new IDs) ----
   const handleExportMenuCsv = () => {
     const menuEntries =
       entries?.filter((e) => e.menu && e.menu.mainCourse) ?? [];
@@ -517,9 +687,10 @@ export default function AdminRsvpPage() {
       "Username",
       "Seat",
       "Starter",
+      "Second Course",
       "Salad",
       "Main Course",
-      "Local Soup",
+      "Local Soup (legacy)",
       "Swallow",
       "Rice Type",
       "Protein",
@@ -535,6 +706,7 @@ export default function AdminRsvpPage() {
         entry.username ?? "",
         entry.seat ?? "",
         formatMenuId(menu.starter, starterLabelMap),
+        formatHorsDoeuvres(menu.horsDoeuvres ?? null),
         formatMenuId(menu.salad, saladLabelMap),
         formatMainCourse(menu),
         formatMenuId(menu.localSoup, localSoupLabelMap),
@@ -595,17 +767,6 @@ export default function AdminRsvpPage() {
         <div className="text-center relative z-10 w-full max-w-7xl bg-slate-900/60 border border-slate-700/60 rounded-3xl shadow-2xl backdrop-blur-md p-5 sm:p-7 lg:p-9">
           <div className="flex flex-col gap-10 lg:flex-row items-center">
             {/* Invitation / Hero Image */}
-            <div className="relative w-full lg:w-1/2">
-              <div className="overflow-hidden rounded-2xl shadow-xl border border-slate-700/60">
-                <Image
-                  src={invite}
-                  alt="Thanksgiving Service Invitation"
-                  className="h-full w-full object-cover"
-                  priority
-                />
-              </div>
-            </div>
-
             {/* Right Side: Login */}
             <div className="flex-1 text-left space-y-7 mt-4 lg:mt-0">
               <div className="text-center space-y-3">
@@ -676,7 +837,8 @@ export default function AdminRsvpPage() {
   }
 
   // 🔹 VIEW 2: FULL-SCREEN TABLE, GRADIENT BG, TOP BLURRED BANNER + TABS
-  const menuEntries = entries?.filter((e) => e.menu && e.menu.mainCourse) ?? [];
+  const menuEntries =
+    entries?.filter((e) => e.menu && e.menu.mainCourse) ?? [];
 
   return (
     <main className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900 px-3 sm:px-5 py-5 sm:py-7 text-lg">
@@ -689,13 +851,6 @@ export default function AdminRsvpPage() {
         {/* Top banner */}
         <section className="relative w-full rounded-3xl overflow-hidden border border-slate-700/60 shadow-2xl bg-slate-950/60">
           <div className="relative h-44 sm:h-56 md:h-72">
-            <Image
-              src={invite}
-              alt="Thanksgiving Service Invite"
-              fill
-              className="object-cover blur-sm scale-110 brightness-75"
-              priority
-            />
             <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/40 to-slate-950/90" />
 
             <div className="relative z-10 flex flex-col items-start justify-end h-full px-5 sm:px-7 md:px-9 py-5 sm:py-7">
@@ -741,7 +896,7 @@ export default function AdminRsvpPage() {
               <p className="mt-3 text-[1.125rem] text-slate-200 max-w-md">
                 {activeTab === "rsvp"
                   ? "View and manage all registered attendees for the Thanksgiving Service."
-                  : "View all guests who have submitted their menu selections."}
+                  : "View all guests who have submitted their menu selections (Offer 7)."}
               </p>
             </div>
           </div>
@@ -805,36 +960,7 @@ export default function AdminRsvpPage() {
                       </div>
                     </div>
 
-                    <p className="text-base font-bold text-slate-200">
-                      Attendance Status: {formatAttendance(entry.attendance)}
-                    </p>
-
                     <div className="flex flex-col gap-2 mt-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-slate-300 text-base">Seat</span>
-                        <div className="flex items-center gap-3">
-                          <select
-                            className="bg-slate-900 border border-slate-600 rounded-md px-3 py-2 text-base text-slate-100"
-                            value={entry.seat ?? ""}
-                            onChange={(e) =>
-                              handleSeatChange(entry.id, e.target.value)
-                            }
-                            disabled={thisRowLoading || loading}
-                          >
-                            <option value="">—</option>
-                            {seatOptions.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
-                          {thisRowLoading && (
-                            <span className="inline-flex h-5 w-5 items-center justify-center">
-                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" />
-                            </span>
-                          )}
-                        </div>
-                      </div>
 
                       <p className="text-slate-400 text-sm">
                         Submitted: {formatSubmittedAt(entry.submittedAt)}
@@ -855,10 +981,7 @@ export default function AdminRsvpPage() {
                         Name
                       </th>
                       <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold">
-                        Attendance
-                      </th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">
-                        Seat
+                        Username
                       </th>
                       <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">
                         Submitted At
@@ -882,33 +1005,6 @@ export default function AdminRsvpPage() {
                           </td>
                           <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
                             {entry.username}
-                          </td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {formatAttendance(entry.attendance)}
-                          </td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-3">
-                              <select
-                                className="bg-slate-900 border border-slate-600 rounded-md px-3 py-2 text-base text-slate-100"
-                                value={entry.seat ?? ""}
-                                onChange={(e) =>
-                                  handleSeatChange(entry.id, e.target.value)
-                                }
-                                disabled={thisRowLoading || loading}
-                              >
-                                <option value="">—</option>
-                                {seatOptions.map((opt) => (
-                                  <option key={opt} value={opt}>
-                                    {opt}
-                                  </option>
-                                ))}
-                              </select>
-                              {thisRowLoading && (
-                                <span className="inline-flex h-5 w-5 items-center justify-center">
-                                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" />
-                                </span>
-                              )}
-                            </div>
                           </td>
                           <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
                             {formatSubmittedAt(entry.submittedAt)}
@@ -965,14 +1061,15 @@ export default function AdminRsvpPage() {
                           {entry.name}
                         </p>
                       </div>
-                      <span className="text-sm text-slate-300">
-                        Seat: {entry.seat ?? "—"}
-                      </span>
                     </div>
 
                     <p className="text-sm text-slate-200">
                       <span className="font-semibold">Starter:</span>{" "}
                       {formatMenuId(menu.starter, starterLabelMap)}
+                    </p>
+                    <p className="text-sm text-slate-200">
+                      <span className="font-semibold">Second Course:</span>{" "}
+                      {formatHorsDoeuvres(menu.horsDoeuvres ?? null)}
                     </p>
                     <p className="text-sm text-slate-200">
                       <span className="font-semibold">Salad:</span>{" "}
@@ -983,7 +1080,9 @@ export default function AdminRsvpPage() {
                       {formatMainCourse(menu)}
                     </p>
                     <p className="text-sm text-slate-200">
-                      <span className="font-semibold">Local Soup:</span>{" "}
+                      <span className="font-semibold">
+                        Local Soup (legacy):
+                      </span>{" "}
                       {formatMenuId(menu.localSoup, localSoupLabelMap)}
                     </p>
                     <p className="text-sm text-slate-200">
@@ -1025,10 +1124,10 @@ export default function AdminRsvpPage() {
                         Name
                       </th>
                       <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">
-                        Seat
+                        Starter
                       </th>
                       <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">
-                        Starter
+                        Second Course
                       </th>
                       <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">
                         Salad
@@ -1037,7 +1136,7 @@ export default function AdminRsvpPage() {
                         Main Course
                       </th>
                       <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">
-                        Local Soup
+                        Local Soup (legacy)
                       </th>
                       <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">
                         Swallow
@@ -1075,10 +1174,10 @@ export default function AdminRsvpPage() {
                             {entry.name}
                           </td>
                           <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {entry.seat ?? "—"}
+                            {formatMenuId(menu.starter, starterLabelMap)}
                           </td>
                           <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {formatMenuId(menu.starter, starterLabelMap)}
+                            {formatHorsDoeuvres(menu.horsDoeuvres ?? null)}
                           </td>
                           <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
                             {formatMenuId(menu.salad, saladLabelMap)}
@@ -1087,7 +1186,10 @@ export default function AdminRsvpPage() {
                             {formatMainCourse(menu)}
                           </td>
                           <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {formatMenuId(menu.localSoup, localSoupLabelMap)}
+                            {formatMenuId(
+                              menu.localSoup,
+                              localSoupLabelMap
+                            )}
                           </td>
                           <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
                             {formatMenuId(menu.swallow, swallowLabelMap)}
