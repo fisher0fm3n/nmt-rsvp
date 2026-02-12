@@ -33,7 +33,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const STORAGE_KEY = "nmt_rsvp";
+const STORAGE_KEY = "mbtc17_nmt_rsvp";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore
     }
-    router.push("/menu/dec7th");
+    router.push("/menu/mbtc17");
   }
 
   const value: AuthContextValue = {

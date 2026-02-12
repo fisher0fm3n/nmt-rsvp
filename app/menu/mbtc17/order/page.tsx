@@ -2,7 +2,7 @@
 // @ts-nocheck
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Great_Vibes, Cormorant_Garamond, Poppins } from "next/font/google";
 import { useAuth } from "@/app/auth/components/AuthProvider";
@@ -32,8 +32,7 @@ type MenuPayload = {
   salad: string | null;
   mainCourse: string | null;
   dessert: string | null;
-  afters: string | null; // SNACKS/OTHERS stored here
-  // legacy keys (kept for API compatibility)
+  afters: string | null; // we’ll store SNACKS/OTHERS here
   appetizers?: string[] | string | null;
   localSoup?: string | null;
   swallow?: string | null;
@@ -41,17 +40,22 @@ type MenuPayload = {
   protein?: string | null;
 };
 
-type MenuType = "local" | "continental";
+/**
+ * MENU (Updated)
+ * Starter + Salad are fixed options (still selectable for consistency).
+ * Main Course: Local + Continental (two tabs).
+ * Dessert + Snacks/Others apply to both.
+ */
 
-/** STARTER */
+// STARTER
 const starterOptions: MenuOption[] = [
   { id: "starter-goat-meat-pepper-soup", label: "Goat Meat Pepper Soup with Bread Rolls" },
 ];
 
-/** SALADS */
+// SALADS
 const saladOptions: MenuOption[] = [{ id: "salad-chicken-salad", label: "Chicken Salad" }];
 
-/** MAIN COURSE — LOCAL */
+// MAIN COURSE — LOCAL
 const localMainOptions: MenuOption[] = [
   {
     id: "local-egusi-efo-mixed-okro-semo-poundo",
@@ -59,11 +63,17 @@ const localMainOptions: MenuOption[] = [
   },
   { id: "local-amala-ewedu-gbegiri", label: "Amala, Ewedu & Gbegiri" },
   { id: "local-ofada-rice-sauce-plantain", label: "Ofada Rice / Ofada Sauce / Plantain" },
-  { id: "local-jollof-rice-chicken-fish-moinmoin", label: "Jollof Rice / Chicken / Fish / Moinmoin" },
-  { id: "local-fried-rice-chicken-fish-coleslaw", label: "Fried Rice / Chicken / Fish / Coleslaw" },
+  {
+    id: "local-jollof-rice-chicken-fish-moinmoin",
+    label: "Jollof Rice / Chicken / Fish / Moinmoin",
+  },
+  {
+    id: "local-fried-rice-chicken-fish-coleslaw",
+    label: "Fried Rice / Chicken / Fish / Coleslaw",
+  },
 ];
 
-/** MAIN COURSE — CONTINENTAL */
+// MAIN COURSE — CONTINENTAL (also appears under “Local -> Continental” in your copy)
 const continentalMainOptions: MenuOption[] = [
   {
     id: "continental-herb-roasted-chicken-basmati-nigerian-sauce",
@@ -75,14 +85,14 @@ const continentalMainOptions: MenuOption[] = [
   },
 ];
 
-/** DESSERT */
+// DESSERT (applies to both)
 const dessertOptions: MenuOption[] = [
   { id: "dessert-ice-cream", label: "Ice Cream" },
   { id: "dessert-cup-cakes", label: "Cup Cakes" },
   { id: "dessert-parfait", label: "Parfait" },
 ];
 
-/** SNACKS/OTHERS */
+// SNACKS/OTHERS (applies to both) — stored as `afters`
 const snacksOptions: MenuOption[] = [
   { id: "snacks-small-chops", label: "Small Chops" },
   {
@@ -92,12 +102,13 @@ const snacksOptions: MenuOption[] = [
 ];
 
 const steps = [
-  { id: 1, label: "Choose Menu Type" },
-  { id: 2, label: "Starter & Salad" },
-  { id: 3, label: "Main Course" },
-  { id: 4, label: "Dessert & Snacks" },
-  { id: 5, label: "Review & Confirm" },
+  { id: 1, label: "Starter & Salad" },
+  { id: 2, label: "Main Course" },
+  { id: 3, label: "Dessert & Snacks" },
+  { id: 4, label: "Review & Confirm" },
 ];
+
+type MainCategory = "local" | "continental";
 
 function CornerOrnament({
   className = "",
@@ -190,21 +201,17 @@ export default function MenuSelectionPage() {
   const router = useRouter();
   const { user } = useAuth() as { user: User | null };
 
-  // Step 1
-  const [menuType, setMenuType] = useState<MenuType | "">("");
-
-  // Step 2
   const [starter, setStarter] = useState("");
   const [salad, setSalad] = useState("");
 
-  // Step 3 (ONLY this value matters for main course regardless of menuType)
+  const [selectedCategory, setSelectedCategory] = useState<MainCategory>("local");
+  const [localMain, setLocalMain] = useState("");
+  const [continentalMain, setContinentalMain] = useState("");
   const [mainCourse, setMainCourse] = useState("");
 
-  // Step 4
   const [dessert, setDessert] = useState("");
-  const [snacks, setSnacks] = useState("");
+  const [snacks, setSnacks] = useState(""); // stored as afters
 
-  // Meta
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -215,15 +222,15 @@ export default function MenuSelectionPage() {
   }, [user, router]);
 
   const setDefaultsIfEmpty = () => {
-    setMenuType("");
     setStarter("");
     setSalad("");
+    setSelectedCategory("local");
+    setLocalMain("");
+    setContinentalMain("");
     setMainCourse("");
     setDessert("");
     setSnacks("");
   };
-
-  const allMainOptions = [...localMainOptions, ...continentalMainOptions];
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -264,11 +271,19 @@ export default function MenuSelectionPage() {
         setDessert(menu.dessert || "");
         setSnacks(menu.afters || "");
 
-        // Menu type is only for DISPLAY/FILTERING options — infer it if possible, otherwise leave empty.
         const mc = menu.mainCourse || "";
-        if (localMainOptions.some((o) => o.id === mc)) setMenuType("local");
-        else if (continentalMainOptions.some((o) => o.id === mc)) setMenuType("continental");
-        else setMenuType("");
+        if (localMainOptions.some((o) => o.id === mc)) {
+          setSelectedCategory("local");
+          setLocalMain(mc);
+        } else if (continentalMainOptions.some((o) => o.id === mc)) {
+          setSelectedCategory("continental");
+          setContinentalMain(mc);
+        } else {
+          setSelectedCategory("local");
+          setLocalMain("");
+          setContinentalMain("");
+          setMainCourse("");
+        }
       } catch {
         setDefaultsIfEmpty();
       } finally {
@@ -288,23 +303,10 @@ export default function MenuSelectionPage() {
   const totalSteps = steps.length;
   const progressPercent = ((currentStep - 1) / (totalSteps - 1 || 1)) * 100;
 
-  const optionLabel = (id: string, options: MenuOption[]) => (id ? options.find((o) => o.id === id)?.label || "" : "");
+  const optionLabel = (id: string | null | undefined, options: MenuOption[]) =>
+    id ? options.find((o) => o.id === id)?.label || "" : "";
 
-  const mainOptionsForType =
-    menuType === "local" ? localMainOptions : menuType === "continental" ? continentalMainOptions : [];
-
-  const selectedMainLabel = mainCourse ? allMainOptions.find((o) => o.id === mainCourse)?.label : "";
-
-  // VALIDATION — mainCourse is required, but NOT validated against menuType
   const validateStep1 = () => {
-    if (!menuType) {
-      alert("Please select either Local or Continental.");
-      return false;
-    }
-    return true;
-  };
-
-  const validateStep2 = () => {
     if (!starter) {
       alert("Please select your Starter.");
       return false;
@@ -316,7 +318,7 @@ export default function MenuSelectionPage() {
     return true;
   };
 
-  const validateStep3 = () => {
+  const validateStep2 = () => {
     if (!mainCourse) {
       alert("Please select a Main Course.");
       return false;
@@ -324,7 +326,7 @@ export default function MenuSelectionPage() {
     return true;
   };
 
-  const validateStep4 = () => {
+  const validateStep3 = () => {
     if (!dessert) {
       alert("Please select a Dessert.");
       return false;
@@ -349,10 +351,6 @@ export default function MenuSelectionPage() {
       setCurrentStep(3);
       return false;
     }
-    if (!validateStep4()) {
-      setCurrentStep(4);
-      return false;
-    }
     return true;
   };
 
@@ -361,20 +359,15 @@ export default function MenuSelectionPage() {
     if (currentStep === 1 && !validateStep1()) return;
     if (currentStep === 2 && !validateStep2()) return;
     if (currentStep === 3 && !validateStep3()) return;
-    if (currentStep === 4 && !validateStep4()) return;
     setCurrentStep((p) => (p < totalSteps ? p + 1 : p));
   };
 
   const goPrev = () => setCurrentStep((p) => (p > 1 ? p - 1 : p));
 
-  // IMPORTANT: DO NOT clear mainCourse when menuType changes.
-  const onChangeMenuType = (v: MenuType) => {
-    setMenuType(v);
-  };
-
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!user?.id) return;
+
     if (!validateAll()) return;
 
     setSubmitting(true);
@@ -389,10 +382,10 @@ export default function MenuSelectionPage() {
           id: user.id,
           starter: starter || null,
           salad: salad || null,
-          mainCourse: mainCourse || null, // ✅ ONLY the selected value is saved
+          mainCourse: mainCourse || null,
           dessert: dessert || null,
-          afters: snacks || null, // Snacks/Others
-          // legacy keys
+          afters: snacks || null, // SNACKS/OTHERS
+          // keep legacy keys null to avoid breaking backend expectations
           localSoup: null,
           swallow: null,
           riceType: null,
@@ -416,7 +409,7 @@ export default function MenuSelectionPage() {
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden px-4 py-10">
-      {/* Deep green + gold vibe */}
+      {/* Deep green + gold vibe (matches banner) */}
       <div className="absolute inset-0 -z-20 bg-[radial-gradient(1200px_800px_at_20%_10%,rgba(20,83,45,0.75),transparent_60%),radial-gradient(1000px_700px_at_85%_25%,rgba(6,95,70,0.55),transparent_58%),radial-gradient(900px_650px_at_40%_90%,rgba(22,78,99,0.35),transparent_55%),linear-gradient(135deg,#052e23_0%,#064e3b_45%,#052e23_100%)]" />
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(800px_500px_at_50%_30%,rgba(250,204,21,0.08),transparent_60%)]" />
 
@@ -436,7 +429,9 @@ export default function MenuSelectionPage() {
               </h1>
               <OrnateDivider />
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <p className={`${poppins.className} text-sm text-neutral-700`}>Complete the steps below to confirm your choices.</p>
+                <p className={`${poppins.className} text-sm text-neutral-700`}>
+                  Complete the steps below to confirm your choices.
+                </p>
                 <button
                   type="button"
                   onClick={() => router.replace("/menu/mbtc17")}
@@ -447,6 +442,7 @@ export default function MenuSelectionPage() {
               </div>
             </div>
 
+            {/* Body */}
             <div className="px-6 sm:px-10 pb-10">
               {/* Progress */}
               <div className="mb-6">
@@ -473,50 +469,8 @@ export default function MenuSelectionPage() {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Step 1: Menu Type */}
+                {/* Step 1 */}
                 {currentStep === 1 && (
-                  <div className="rounded-2xl border border-amber-300/35 bg-white/60 p-5 sm:p-6 shadow-[0_18px_60px_rgba(0,0,0,0.14)]">
-                    <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>Choose Menu Type</h2>
-                    <OrnateDivider />
-
-                    <p className={`${poppins.className} text-sm text-neutral-700`}>
-                      Select <span className="font-semibold">one</span> for viewing options. Your saved main course will always be exactly what you pick later.
-                    </p>
-
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <button
-                        type="button"
-                        onClick={() => onChangeMenuType("local")}
-                        disabled={isDisabled}
-                        className={`${poppins.className} rounded-2xl border px-5 py-4 text-left transition shadow-sm ${
-                          menuType === "local"
-                            ? "border-amber-500 bg-gradient-to-r from-amber-300/60 to-yellow-200/60"
-                            : "border-amber-200 bg-white/70 hover:bg-white"
-                        }`}
-                      >
-                        <p className="text-xs font-semibold tracking-[0.18em] uppercase text-amber-900">Local</p>
-                        <p className="mt-1 text-sm text-neutral-800">Nigerian Heritage Dishes</p>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => onChangeMenuType("continental")}
-                        disabled={isDisabled}
-                        className={`${poppins.className} rounded-2xl border px-5 py-4 text-left transition shadow-sm ${
-                          menuType === "continental"
-                            ? "border-amber-500 bg-gradient-to-r from-amber-300/60 to-yellow-200/60"
-                            : "border-amber-200 bg-white/70 hover:bg-white"
-                        }`}
-                      >
-                        <p className="text-xs font-semibold tracking-[0.18em] uppercase text-amber-900">Continental</p>
-                        <p className="mt-1 text-sm text-neutral-800">Chef’s Continental Selections</p>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 2 */}
-                {currentStep === 2 && (
                   <div className="rounded-2xl border border-amber-300/35 bg-white/60 p-5 sm:p-6 shadow-[0_18px_60px_rgba(0,0,0,0.14)]">
                     <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>Starter & Salad</h2>
                     <OrnateDivider />
@@ -549,60 +503,84 @@ export default function MenuSelectionPage() {
                   </div>
                 )}
 
-                {/* Step 3 */}
-                {currentStep === 3 && (
+                {/* Step 2 */}
+                {currentStep === 2 && (
                   <div className="rounded-2xl border border-amber-300/35 bg-white/60 p-5 sm:p-6 shadow-[0_18px_60px_rgba(0,0,0,0.14)]">
                     <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>Main Course</h2>
                     <OrnateDivider />
 
-                    <div className="rounded-xl border border-amber-200/60 bg-amber-50/60 p-4">
-                      <p className={`${poppins.className} text-xs text-neutral-800`}>
-                        Viewing options for:{" "}
-                        <span className="font-semibold text-amber-900">
-                          {menuType ? (menuType === "local" ? "Local" : "Continental") : "—"}
-                        </span>
-                      </p>
-                      {mainCourse && (
-                        <p className={`${poppins.className} mt-1 text-xs text-neutral-700`}>
-                          Current selection: <span className="font-semibold text-neutral-900">{selectedMainLabel || "Selected Main Course"}</span>
-                        </p>
-                      )}
+                    <div className="flex overflow-hidden rounded-full border border-amber-200 bg-amber-50/70 text-[11px] sm:text-xs">
+                      {[
+                        { id: "local", label: "LOCAL" },
+                        { id: "continental", label: "CONTINENTAL" },
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setSelectedCategory(tab.id as MainCategory)}
+                          className={`${poppins.className} flex-1 px-3 py-2 font-semibold tracking-[0.18em] uppercase transition ${
+                            selectedCategory === tab.id ? "bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-900" : "text-amber-800"
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
                     </div>
 
-                    <div className="mt-4">
-                      <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>
-                        Main Course <span className="text-red-600">*</span>
-                      </label>
+                    {selectedCategory === "local" && (
+                      <div className="mt-4">
+                        <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>
+                          Local Main Course <span className="text-red-600">*</span>
+                        </label>
+                        <select
+                          className={fieldClass}
+                          value={localMain}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setLocalMain(v);
+                            setMainCourse(v);
+                          }}
+                          disabled={isDisabled}
+                        >
+                          <option value="">Select local main course</option>
+                          {localMainOptions.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
 
-                      <select
-                        className={fieldClass}
-                        value={mainCourse}
-                        onChange={(e) => setMainCourse(e.target.value)}
-                        disabled={isDisabled || !menuType}
-                      >
-                        <option value="">{menuType ? "Select main course" : "Select menu type first"}</option>
-
-                        {/* If selected main is NOT in current filtered list, keep it visible */}
-                        {mainCourse && !mainOptionsForType.some((o) => o.id === mainCourse) && (
-                          <option value={mainCourse}>{selectedMainLabel || "Selected Main Course"}</option>
-                        )}
-
-                        {mainOptionsForType.map((opt) => (
-                          <option key={opt.id} value={opt.id}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-
-                      <p className={`${poppins.className} mt-2 text-[11px] text-neutral-700`}>
-                        Your saved main course will be exactly what you select here (regardless of the menu type used to browse options).
-                      </p>
-                    </div>
+                    {selectedCategory === "continental" && (
+                      <div className="mt-4">
+                        <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>
+                          Continental Main Course <span className="text-red-600">*</span>
+                        </label>
+                        <select
+                          className={fieldClass}
+                          value={continentalMain}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setContinentalMain(v);
+                            setMainCourse(v);
+                          }}
+                          disabled={isDisabled}
+                        >
+                          <option value="">Select continental main course</option>
+                          {continentalMainOptions.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Step 4 */}
-                {currentStep === 4 && (
+                {/* Step 3 */}
+                {currentStep === 3 && (
                   <div className="rounded-2xl border border-amber-300/35 bg-white/60 p-5 sm:p-6 shadow-[0_18px_60px_rgba(0,0,0,0.14)]">
                     <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>Dessert & Snacks</h2>
                     <OrnateDivider />
@@ -635,48 +613,48 @@ export default function MenuSelectionPage() {
                   </div>
                 )}
 
-                {/* Step 5 */}
-                {currentStep === 5 && (
+                {/* Step 4 */}
+                {currentStep === 4 && (
                   <div className="rounded-2xl border border-amber-300/35 bg-white/60 p-5 sm:p-6 shadow-[0_18px_60px_rgba(0,0,0,0.14)]">
                     <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>Review & Confirm</h2>
                     <OrnateDivider />
 
-                    <div className="rounded-xl border border-amber-200/50 bg-amber-50/60 p-4">
-                      <dl className={`${poppins.className} text-sm space-y-3`}>
-                        <div className="grid grid-cols-[140px,1fr] gap-3">
-                          <dt className="font-semibold text-amber-900">Menu Type</dt>
-                          <dd className="text-neutral-900">{menuType ? (menuType === "local" ? "Local" : "Continental") : "—"}</dd>
-                        </div>
-                        <div className="grid grid-cols-[140px,1fr] gap-3">
-                          <dt className="font-semibold text-amber-900">Starter</dt>
-                          <dd className="text-neutral-900">{optionLabel(starter, starterOptions) || "—"}</dd>
-                        </div>
-                        <div className="grid grid-cols-[140px,1fr] gap-3">
-                          <dt className="font-semibold text-amber-900">Salad</dt>
-                          <dd className="text-neutral-900">{optionLabel(salad, saladOptions) || "—"}</dd>
-                        </div>
-                        <div className="grid grid-cols-[140px,1fr] gap-3">
-                          <dt className="font-semibold text-amber-900">Main Course</dt>
-                          <dd className="text-neutral-900">{optionLabel(mainCourse, allMainOptions) || "—"}</dd>
-                        </div>
-                        <div className="grid grid-cols-[140px,1fr] gap-3">
-                          <dt className="font-semibold text-amber-900">Dessert</dt>
-                          <dd className="text-neutral-900">{optionLabel(dessert, dessertOptions) || "—"}</dd>
-                        </div>
-                        <div className="grid grid-cols-[140px,1fr] gap-3">
-                          <dt className="font-semibold text-amber-900">Snacks</dt>
-                          <dd className="text-neutral-900">{optionLabel(snacks, snacksOptions) || "—"}</dd>
-                        </div>
-                      </dl>
+                    <div className="space-y-3">
+                      <div className="rounded-xl border border-amber-200/50 bg-amber-50/60 p-4">
+                        <dl className={`${poppins.className} text-sm space-y-3`}>
+                          <div className="grid grid-cols-[120px,1fr] gap-3">
+                            <dt className="font-semibold text-amber-900">Starter</dt>
+                            <dd className="text-neutral-900">{optionLabel(starter, starterOptions) || "—"}</dd>
+                          </div>
+                          <div className="grid grid-cols-[120px,1fr] gap-3">
+                            <dt className="font-semibold text-amber-900">Salad</dt>
+                            <dd className="text-neutral-900">{optionLabel(salad, saladOptions) || "—"}</dd>
+                          </div>
+                          <div className="grid grid-cols-[120px,1fr] gap-3">
+                            <dt className="font-semibold text-amber-900">Main Course</dt>
+                            <dd className="text-neutral-900">
+                              {optionLabel(mainCourse, [...localMainOptions, ...continentalMainOptions]) || "—"}
+                            </dd>
+                          </div>
+                          <div className="grid grid-cols-[120px,1fr] gap-3">
+                            <dt className="font-semibold text-amber-900">Dessert</dt>
+                            <dd className="text-neutral-900">{optionLabel(dessert, dessertOptions) || "—"}</dd>
+                          </div>
+                          <div className="grid grid-cols-[120px,1fr] gap-3">
+                            <dt className="font-semibold text-amber-900">Snacks</dt>
+                            <dd className="text-neutral-900">{optionLabel(snacks, snacksOptions) || "—"}</dd>
+                          </div>
+                        </dl>
+                      </div>
 
                       {loadingProfile && !success && (
-                        <p className={`${poppins.className} mt-4 text-[11px] text-neutral-700`}>Loading your previous selections…</p>
+                        <p className={`${poppins.className} text-[11px] text-neutral-700`}>Loading your previous selections…</p>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* Controls */}
+                {/* Footer controls */}
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-amber-200/50 pt-4">
                   <div className="flex gap-2">
                     <button

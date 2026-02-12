@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Thanksgiving Service RSVP",
-  description: "Thanksgiving Service RSVP",
+  title: "MBTC 17 BANQUET",
+  description: "MBTC 17 BANQUET",
 };
 
 export default function RootLayout({
