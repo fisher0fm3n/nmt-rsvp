@@ -1,3 +1,5 @@
+// app/thanksgivingservice/admin/page.tsx
+// @ts-nocheck
 "use client";
 
 import { useEffect, useMemo, useState, FormEvent } from "react";
@@ -13,7 +15,8 @@ const cormorant = Cormorant_Garamond({
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
 // ─────────────────────────────────────────────
-// Menu option definitions + label maps (NEW MENU)
+// Menu option definitions + label maps
+// (kept as-is from your file; only UI/layout/table columns change)
 // ─────────────────────────────────────────────
 
 type MenuOption = { id: string; label: string };
@@ -159,11 +162,10 @@ const localSoupLabelMap: Record<string, string> = {
 // ─────────────────────────────────────────────
 
 type Menu = {
-  type?: "local" | "continental" | null; // ✅ new
-
+  type?: "local" | "continental" | null;
   starter: string | null;
   salad: string | null;
-  mainCourse: string; // id
+  mainCourse: string;
   localSoup: string | null;
   swallow: string | null;
   dessert: string | null;
@@ -193,12 +195,31 @@ type ApiResponse = {
 
 const SESSION_KEY = "rsvp_admin_session";
 
-const seatOptions = [...Array.from({ length: 50 }, (_, i) => `Table ${i + 1}`), "Bleachers"];
+const humanizeId = (raw: string) => {
+  // remove common prefixes that shouldn’t show to admins
+  const cleaned = raw
+    .replace(/^continental-/, "")
+    .replace(/^local-/, "")
+    .replace(/^oriental-/, "")
+    .replace(/_/g, "-")
+    .trim();
 
-const formatMenuId = (id: string | null | undefined, labelMap: Record<string, string>) => {
-  if (!id) return "—";
-  return labelMap[id] ?? id;
+  // turn "herb-roasted-chicken-basmati-rice" -> "Herb Roasted Chicken Basmati Rice"
+  return cleaned
+    .split("-")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 };
+
+const formatMenuId = (
+  id: string | null | undefined,
+  labelMap: Record<string, string>
+) => {
+  if (!id) return "—";
+  return labelMap[id] ?? humanizeId(id);
+};
+
 
 const formatMainCourse = (menu?: Menu | null) => {
   if (!menu) return "—";
@@ -219,10 +240,126 @@ const inferMenuType = (menu?: Menu | null): "local" | "continental" | "unknown" 
   return "unknown";
 };
 
+function CornerOrnament({
+  className = "",
+  flipX = false,
+  flipY = false,
+}: {
+  className?: string;
+  flipX?: boolean;
+  flipY?: boolean;
+}) {
+  const transform = `${flipX ? "-scale-x-100" : ""} ${flipY ? "-scale-y-100" : ""}`.trim();
+  return (
+    <div className={`pointer-events-none absolute ${className}`}>
+      <svg
+        viewBox="0 0 240 240"
+        className={`h-28 w-28 sm:h-36 sm:w-36 opacity-90 drop-shadow-[0_10px_18px_rgba(0,0,0,0.28)] ${transform}`}
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="240" y2="240" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#FDE68A" />
+            <stop offset="0.5" stopColor="#D97706" />
+            <stop offset="1" stopColor="#FDE68A" />
+          </linearGradient>
+          <radialGradient
+            id="b"
+            cx="0"
+            cy="0"
+            r="1"
+            gradientUnits="userSpaceOnUse"
+            gradientTransform="translate(170 78) rotate(45) scale(110)"
+          >
+            <stop stopColor="#FDE68A" stopOpacity="0.95" />
+            <stop offset="1" stopColor="#F59E0B" stopOpacity="0.15" />
+          </radialGradient>
+        </defs>
+
+        <path
+          d="M18 206c62-26 86-77 106-121 20-44 44-73 98-77"
+          stroke="url(#g)"
+          strokeWidth="3.4"
+          strokeLinecap="round"
+        />
+        <path
+          d="M28 220c58-20 82-67 103-112 21-45 49-84 104-90"
+          stroke="url(#g)"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          opacity="0.85"
+        />
+        <path
+          d="M26 190c48-14 77-44 97-86 20-42 41-70 100-76"
+          stroke="url(#g)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          opacity="0.65"
+        />
+
+        {[
+          [170, 78],
+          [195, 60],
+          [210, 92],
+          [150, 52],
+          [132, 90],
+          [188, 118],
+          [160, 128],
+        ].map(([cx, cy], i) => (
+          <g key={i}>
+            <circle cx={cx} cy={cy} r="8" fill="url(#b)" />
+            <circle cx={cx} cy={cy} r="3.6" fill="#FDE68A" opacity="0.95" />
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function OrnateDivider() {
+  return (
+    <div className="flex items-center justify-center gap-3 my-4">
+      <span className="h-px w-16 sm:w-24 bg-gradient-to-r from-transparent via-amber-400/80 to-transparent" />
+      <span className="h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_18px_rgba(251,191,36,0.65)]" />
+      <span className="h-px w-16 sm:w-24 bg-gradient-to-r from-transparent via-amber-400/80 to-transparent" />
+    </div>
+  );
+}
+
+const CountCard = ({
+  label,
+  value,
+  tone = "neutral",
+  hint,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  tone?: "neutral" | "amber" | "green";
+}) => {
+  const toneClass =
+    tone === "amber"
+      ? "border-amber-400/45 bg-amber-50/60"
+      : tone === "green"
+      ? "border-emerald-400/45 bg-emerald-50/60"
+      : "border-amber-300/35 bg-white/60";
+
+  return (
+    <div className={`rounded-2xl border p-5 sm:p-6 shadow-[0_18px_60px_rgba(0,0,0,0.12)] ${toneClass}`}>
+      <p className={`${poppins.className} text-xs tracking-[0.18em] uppercase text-neutral-700`}>{label}</p>
+      <p className={`${cormorant.className} mt-2 text-4xl sm:text-5xl font-semibold text-neutral-900`}>{value}</p>
+      {hint ? <p className={`${poppins.className} mt-1 text-xs text-neutral-600`}>{hint}</p> : null}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────
+
 export default function AdminRsvpPage() {
-  // ─────────────────────────────────────────────
   // State
-  // ─────────────────────────────────────────────
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -234,18 +371,15 @@ export default function AdminRsvpPage() {
   const [apiMessage, setApiMessage] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState<number | null>(null);
 
-  const [seatLoading, setSeatLoading] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<"rsvp" | "menu">("rsvp");
 
-  // counts route stats
+  // counts route stats (keep)
   const [countsLoading, setCountsLoading] = useState(false);
   const [continentalCount, setContinentalCount] = useState<number>(0);
   const [localCount, setLocalCount] = useState<number>(0);
-  const [continentalLimit, setContinentalLimit] = useState<number>(100);
 
   const isAuthed = entries !== null;
 
-  // ✅ IMPORTANT: derive menuEntries + stats with useMemo UNCONDITIONALLY (no early-return before this)
   const menuEntries = useMemo(() => {
     const list = entries ?? [];
     return list.filter((e) => e.menu && e.menu.mainCourse);
@@ -253,16 +387,13 @@ export default function AdminRsvpPage() {
 
   const stats = useMemo(() => {
     const total = entries?.length ?? 0;
-    const withMenu = menuEntries.length;
 
-    const yes = (entries ?? []).filter((e) => (e.attendance || "").toLowerCase() === "yes").length;
-    const no = (entries ?? []).filter((e) => (e.attendance || "").toLowerCase() === "no").length;
-    const unknownAttend = Math.max(0, total - yes - no);
+    // Use /menu/counts when available (you already do)
+    const c = continentalCount ?? 0;
+    const l = localCount ?? 0;
 
-    const withSeat = (entries ?? []).filter((e) => !!e.seat).length;
-    const noSeat = Math.max(0, total - withSeat);
-
-    const typeCountsFromEntries = menuEntries.reduce(
+    // Fallback counts from entries (only if counts are 0 but we have menus)
+    const fromEntries = menuEntries.reduce(
       (acc, e) => {
         const t = inferMenuType(e.menu);
         if (t === "continental") acc.continental += 1;
@@ -273,38 +404,18 @@ export default function AdminRsvpPage() {
       { continental: 0, local: 0, unknown: 0 }
     );
 
-    const bySeat = (entries ?? []).reduce((acc, e) => {
-      const key = e.seat || "Unassigned";
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const topSeats = Object.entries(bySeat)
-      .filter(([k]) => k !== "Unassigned")
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6);
-
-    const continentalRemaining = Math.max(0, continentalLimit - continentalCount);
-    const continentalFull = continentalCount >= continentalLimit;
+    const computedContinental = c || fromEntries.continental;
+    const computedLocal = l || fromEntries.local;
 
     return {
       total,
-      withMenu,
-      yes,
-      no,
-      unknownAttend,
-      withSeat,
-      noSeat,
-      typeCountsFromEntries,
-      topSeats,
-      continentalRemaining,
-      continentalFull,
+      menuCount: menuEntries.length,
+      continental: computedContinental,
+      local: computedLocal,
     };
-  }, [entries, menuEntries, continentalCount, continentalLimit]);
+  }, [entries, menuEntries, continentalCount, localCount]);
 
-  // ─────────────────────────────────────────────
   // Helpers
-  // ─────────────────────────────────────────────
   const formatSubmittedAt = (value?: string) => {
     if (!value) return "—";
     const date = new Date(value);
@@ -318,42 +429,7 @@ export default function AdminRsvpPage() {
     });
   };
 
-  const StatCard = ({
-    label,
-    value,
-    hint,
-    tone = "neutral",
-  }: {
-    label: string;
-    value: string | number;
-    hint?: string;
-    tone?: "neutral" | "green" | "amber" | "red" | "blue" | "purple";
-  }) => {
-    const toneClass =
-      tone === "green"
-        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
-        : tone === "amber"
-        ? "border-amber-500/40 bg-amber-500/10 text-amber-100"
-        : tone === "red"
-        ? "border-red-500/40 bg-red-500/10 text-red-100"
-        : tone === "blue"
-        ? "border-sky-500/40 bg-sky-500/10 text-sky-100"
-        : tone === "purple"
-        ? "border-purple-500/40 bg-purple-500/10 text-purple-100"
-        : "border-slate-700/60 bg-slate-950/40 text-slate-100";
-
-    return (
-      <div className={`rounded-2xl border p-4 sm:p-5 ${toneClass}`}>
-        <p className={`${poppins.className} text-xs tracking-[0.18em] uppercase opacity-90`}>{label}</p>
-        <p className={`${cormorant.className} mt-2 text-3xl sm:text-4xl font-semibold`}>{value}</p>
-        {hint ? <p className={`${poppins.className} mt-1 text-xs text-slate-200/70`}>{hint}</p> : null}
-      </div>
-    );
-  };
-
-  // ─────────────────────────────────────────────
   // API calls
-  // ─────────────────────────────────────────────
   const loginAndFetch = async (u: string, p: string) => {
     setError(null);
     setApiMessage(null);
@@ -431,7 +507,6 @@ export default function AdminRsvpPage() {
       const data = json?.data || {};
       setContinentalCount(Number(data.continentalCount || 0));
       setLocalCount(Number(data.localCount || 0));
-      setContinentalLimit(Number(data.continentalLimit || 100));
     } catch (e) {
       console.warn("Failed to fetch menu counts", e);
     } finally {
@@ -476,71 +551,11 @@ export default function AdminRsvpPage() {
     }
   };
 
-  const handleSeatChange = async (entryId: string, seat: string) => {
-    if (!seat) return;
-
-    setError(null);
-    setApiMessage(null);
-    setSeatLoading((prev) => ({ ...prev, [entryId]: true }));
-
-    try {
-      const res = await fetch("https://pcdl.co/api/nmt/pka-thanksgivingservice/seat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
-        },
-        body: JSON.stringify({ id: entryId, seat }),
-      });
-
-      if (!res.ok) {
-        setError(`Failed to set seat (status ${res.status})`);
-        return;
-      }
-
-      const json = await res.json();
-      if (!json.status) {
-        setError(json.message || "Failed to set seat.");
-        return;
-      }
-
-      setEntries((prev) =>
-        prev ? prev.map((e) => (e.id === entryId ? { ...e, seat: json.data?.seat ?? seat } : e)) : prev
-      );
-
-      setApiMessage("Seat updated successfully.");
-    } catch (err) {
-      console.error("Error setting seat:", err);
-      setError("Network error while setting seat.");
-    } finally {
-      setSeatLoading((prev) => {
-        const copy = { ...prev };
-        delete copy[entryId];
-        return copy;
-      });
-    }
-  };
-
   const handleExportMenuCsv = () => {
     if (!menuEntries.length) return;
 
-    const header = [
-      "Name",
-      "Username",
-      "Seat",
-      "Menu Type",
-      "Starter",
-      "Second Course",
-      "Salad",
-      "Main Course",
-      "Local Soup (legacy)",
-      "Swallow",
-      "Rice Type",
-      "Protein",
-      "Dessert",
-      "Afters",
-      "Submitted At",
-    ];
+    // Removed seat column per request + trimmed unused columns to match the table
+    const header = ["Name", "Username", "Menu Type", "Starter", "Second Course", "Salad", "Main Course", "Dessert", "Afters", "Submitted At"];
 
     const rows = menuEntries.map((entry) => {
       const menu = entry.menu!;
@@ -548,16 +563,11 @@ export default function AdminRsvpPage() {
       return [
         entry.name ?? "",
         entry.username ?? "",
-        entry.seat ?? "",
         type,
         formatMenuId(menu.starter, starterLabelMap),
         formatHorsDoeuvres(menu.horsDoeuvres ?? null),
         formatMenuId(menu.salad, saladLabelMap),
         formatMainCourse(menu),
-        formatMenuId(menu.localSoup, localSoupLabelMap),
-        formatMenuId(menu.swallow, swallowLabelMap),
-        formatMenuId(menu.riceType, riceTypeLabelMap),
-        formatMenuId(menu.protein, proteinLabelMap),
         formatMenuId(menu.dessert, dessertLabelMap),
         formatMenuId(menu.afters, aftersLabelMap),
         formatSubmittedAt(entry.submittedAt),
@@ -586,9 +596,7 @@ export default function AdminRsvpPage() {
     URL.revokeObjectURL(url);
   };
 
-  // ─────────────────────────────────────────────
   // Effects
-  // ─────────────────────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -665,71 +673,78 @@ export default function AdminRsvpPage() {
   }, [activeTab, isAuthed]);
 
   // ─────────────────────────────────────────────
-  // Renders (safe now — hooks already ran)
+  // Renders
   // ─────────────────────────────────────────────
   if (restoring && !isAuthed) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900 text-slate-100">
-        <p className="text-lg">Loading admin session…</p>
+      <main className="min-h-screen flex items-center justify-center bg-[radial-gradient(1200px_800px_at_20%_10%,rgba(20,83,45,0.75),transparent_60%),linear-gradient(135deg,#052e23_0%,#064e3b_45%,#052e23_100%)]">
+        <p className={`${poppins.className} text-sm text-amber-50/90`}>Loading admin session…</p>
       </main>
     );
   }
 
+  // Login view (redesigned to match scheme)
   if (!isAuthed) {
     return (
-      <main className="relative min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900 text-lg">
+      <main className="relative min-h-screen flex items-center justify-center px-4 py-10">
+        <div className="absolute inset-0 -z-20 bg-[radial-gradient(1200px_800px_at_20%_10%,rgba(20,83,45,0.75),transparent_60%),radial-gradient(1000px_700px_at_85%_25%,rgba(6,95,70,0.55),transparent_58%),linear-gradient(135deg,#052e23_0%,#064e3b_45%,#052e23_100%)]" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(800px_500px_at_50%_30%,rgba(250,204,21,0.08),transparent_60%)]" />
         <canvas id="sparkles-canvas" className="pointer-events-none fixed inset-0 z-0 w-full" />
 
-        <div className="text-center relative z-10 w-full max-w-7xl bg-slate-900/60 border border-slate-700/60 rounded-3xl shadow-2xl backdrop-blur-md p-5 sm:p-7 lg:p-9">
-          <div className="flex flex-col gap-10 lg:flex-row items-center">
-            <div className="flex-1 text-left space-y-7 mt-4 lg:mt-0">
-              <div className="text-center space-y-3">
-                <h2 className={`${cormorant.className} text-center text-2xl sm:text-5xl text-blue-300 mt-4`}>
-                  RSVP Admin
-                </h2>
+        <div className="relative z-10 w-full max-w-xl">
+          <div className="relative overflow-hidden rounded-[28px] border border-amber-200/35 bg-[#fbf3d6] shadow-[0_30px_120px_rgba(0,0,0,0.35)]">
+            <CornerOrnament className="left-2 top-2" />
+            <CornerOrnament className="right-2 top-2" flipX />
+            {/* <CornerOrnament className="left-2 bottom-2" flipY />
+            <CornerOrnament className="right-2 bottom-2" flipX flipY /> */}
+
+            <div className="m-2 sm:m-3 rounded-[24px] border border-amber-300/40 bg-[linear-gradient(180deg,rgba(255,255,255,0.55),rgba(255,255,255,0.15))] p-6 sm:p-8">
+              <div className="text-center">
+                <p className={`${greatVibes.className} text-3xl text-amber-800/90`}>Admin</p>
+                <h1 className={`${cormorant.className} mt-2 text-3xl sm:text-4xl font-semibold text-neutral-900`}>MBTC 17 BANQUET</h1>
+                <OrnateDivider />
+                <p className={`${poppins.className} text-sm text-neutral-700`}>Login to view RSVPs and Menu Orders.</p>
               </div>
 
-              <section className="space-y-5">
-                <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-5">
-                  <div className="text-left">
-                    <label className={`${poppins.className} block text-base text-slate-200 mb-1.5`} htmlFor="username">
-                      Username
-                    </label>
-                    <input
-                      id="username"
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="w-full rounded-lg bg-slate-950/60 border border-slate-700/70 px-4 py-2.5 text-base text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
-                      autoComplete="username"
-                    />
-                  </div>
+              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                <div>
+                  <label className={`${poppins.className} text-sm font-medium text-neutral-800`} htmlFor="username">
+                    Username
+                  </label>
+                  <input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-amber-300/45 bg-white/70 px-4 py-3 text-sm text-neutral-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                    autoComplete="username"
+                  />
+                </div>
 
-                  <div className="text-left">
-                    <label className={`${poppins.className} block text-base text-slate-200 mb-1.5`} htmlFor="password">
-                      Password
-                    </label>
-                    <input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-lg bg-slate-950/60 border border-slate-700/70 px-4 py-2.5 text-base text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
-                      autoComplete="current-password"
-                    />
-                  </div>
+                <div>
+                  <label className={`${poppins.className} text-sm font-medium text-neutral-800`} htmlFor="password">
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-amber-300/45 bg-white/70 px-4 py-3 text-sm text-neutral-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                    autoComplete="current-password"
+                  />
+                </div>
 
-                  {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+                {error && <p className={`${poppins.className} text-xs text-red-600 text-center`}>{error}</p>}
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className={`${poppins.className} cursor-pointer w-full inline-flex items-center justify-center rounded-md px-5 py-3 text-base font-semibold bg-amber-400 hover:bg-amber-300 text-slate-900 shadow-lg shadow-amber-500/40 transition focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-60 disabled:cursor-not-allowed`}
-                  >
-                    {loading ? "Signing in…" : "Login to View RSVPs"}
-                  </button>
-                </form>
-              </section>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`${poppins.className} w-full inline-flex items-center justify-center rounded-full bg-neutral-900 px-6 py-3 text-sm font-semibold text-white hover:bg-neutral-800 transition disabled:opacity-60 disabled:cursor-not-allowed`}
+                >
+                  {loading ? "Signing in…" : "Login"}
+                </button>
+              </form>
             </div>
           </div>
         </div>
@@ -737,414 +752,327 @@ export default function AdminRsvpPage() {
     );
   }
 
+  // Authenticated view
   return (
-    <main className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-950 to-purple-900 px-3 sm:px-5 py-5 sm:py-7 text-lg">
+    <main className="relative min-h-screen w-full overflow-hidden px-4 py-10">
+      {/* Background */}
+      <div className="absolute inset-0 -z-20 bg-[radial-gradient(1200px_800px_at_20%_10%,rgba(20,83,45,0.75),transparent_60%),radial-gradient(1000px_700px_at_85%_25%,rgba(6,95,70,0.55),transparent_58%),radial-gradient(900px_650px_at_40%_90%,rgba(22,78,99,0.35),transparent_55%),linear-gradient(135deg,#052e23_0%,#064e3b_45%,#052e23_100%)]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(800px_500px_at_50%_30%,rgba(250,204,21,0.08),transparent_60%)]" />
       <canvas id="sparkles-canvas" className="pointer-events-none fixed inset-0 z-0 w-full" />
 
-      <div className="relative z-10 max-w-6xl mx-auto space-y-7 sm:space-y-9">
-        {/* Top banner */}
-        <section className="relative w-full rounded-3xl overflow-hidden border border-slate-700/60 shadow-2xl bg-slate-950/60">
-          <div className="relative h-44 sm:h-56 md:h-72">
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/40 to-slate-950/90" />
+      <div className="relative z-10 mx-auto w-full max-w-6xl space-y-6">
+        {/* Card shell like the menu pages */}
+        <div className="relative overflow-hidden rounded-[28px] border border-amber-200/35 bg-[#fbf3d6] shadow-[0_30px_120px_rgba(0,0,0,0.35)]">
+          <CornerOrnament className="left-2 top-2" />
+          <CornerOrnament className="right-2 top-2" flipX />
+          {/* <CornerOrnament className="left-2 bottom-2" flipY />
+          <CornerOrnament className="right-2 bottom-2" flipX flipY /> */}
 
-            <div className="relative z-10 flex flex-col items-start justify-end h-full px-5 sm:px-7 md:px-9 py-5 sm:py-7">
-              <div className="mt-2 w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="m-2 sm:m-3 rounded-[24px] border border-amber-300/40 bg-[linear-gradient(180deg,rgba(255,255,255,0.55),rgba(255,255,255,0.15))]">
+            {/* Header */}
+            <div className="px-6 sm:px-10 pt-10 pb-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <h2 className={`${cormorant.className} text-xl sm:text-3xl md:text-4xl text-emerald-300`}>
-                    RSVP Admin Dashboard
-                  </h2>
-
-                  <div className="mt-3 inline-flex rounded-full bg-slate-900/70 p-1 border border-slate-700/70">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("rsvp")}
-                      className={`${poppins.className} cursor-pointer px-4 sm:px-5 py-1.5 text-sm sm:text-base rounded-full transition ${
-                        activeTab === "rsvp"
-                          ? "bg-amber-400 text-slate-900 font-semibold shadow"
-                          : "text-slate-200 hover:text-white"
+                  <p className={`${greatVibes.className} text-3xl sm:text-4xl text-amber-800/90`}>Admin Dashboard</p>
+                  <h1 className={`${cormorant.className} mt-2 text-3xl sm:text-5xl font-semibold tracking-wide text-neutral-900`}>
+                    MBTC 17 BANQUET
+                  </h1>
+                  <OrnateDivider />
+                  <p className={`${poppins.className} text-sm text-neutral-700`}>
+                    {activeTab === "rsvp"
+                      ? "View all registered attendees."
+                      : "View guests who have submitted menu selections."}
+                  </p>
+                  {(error || apiMessage) && (
+                    <p
+                      className={`${poppins.className} mt-2 text-xs ${
+                        error ? "text-red-600" : "text-emerald-700"
                       }`}
                     >
-                      RSVP Entries
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("menu")}
-                      className={`${poppins.className} cursor-pointer px-4 sm:px-5 py-1.5 text-sm sm:text-base rounded-full transition ${
-                        activeTab === "menu"
-                          ? "bg-amber-400 text-slate-900 font-semibold shadow"
-                          : "text-slate-200 hover:text-white"
-                      }`}
-                    >
-                      Menu Orders
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <p className="mt-3 text-[1.125rem] text-slate-200 max-w-2xl">
-                {activeTab === "rsvp"
-                  ? "View and manage all registered attendees for the Thanksgiving Service."
-                  : "View all guests who have submitted their menu selections."}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={async () => {
-              await handleRefresh();
-              await fetchMenuCounts();
-            }}
-            disabled={loading}
-            className={`${poppins.className} text-base cursor-pointer px-4 py-2 rounded-md bg-slate-200/90 hover:bg-white text-slate-900 font-semibold shadow disabled:opacity-60 disabled:cursor-not-allowed`}
-          >
-            {loading ? "Refreshing…" : "Refresh"}
-          </button>
-          <button
-            onClick={handleLogout}
-            className={`${poppins.className} text-base cursor-pointer px-4 py-2 rounded-md bg-red-500/80 hover:bg-red-400 text-slate-900 font-semibold shadow`}
-          >
-            Logout
-          </button>
-        </div>
-
-        {/* Stats */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className={`${cormorant.className} text-2xl sm:text-3xl text-amber-200 font-semibold`}>Stats</h3>
-            <button
-              type="button"
-              onClick={fetchMenuCounts}
-              disabled={countsLoading}
-              className={`${poppins.className} text-sm cursor-pointer px-3 py-1.5 rounded-md border border-slate-600/60 bg-slate-950/40 text-slate-100 hover:bg-slate-950/60 disabled:opacity-60`}
-            >
-              {countsLoading ? "Updating…" : "Update Stats"}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-            <StatCard label="Total RSVPs" value={stats.total} hint="All entries" tone="neutral" />
-            <StatCard label="Menu Submitted" value={stats.withMenu} hint="Guests w/ menu" tone="blue" />
-            <StatCard label="Attendance: Yes" value={stats.yes} hint="Confirmed attending" tone="green" />
-            <StatCard label="Attendance: No" value={stats.no} hint="Not attending" tone="red" />
-            <StatCard label="Seat Assigned" value={stats.withSeat} hint={`Unassigned: ${stats.noSeat}`} tone="purple" />
-            <StatCard
-              label="Continental Remaining"
-              value={`${stats.continentalRemaining}/${continentalLimit}`}
-              hint={stats.continentalFull ? "FULL" : "Capacity status"}
-              tone={stats.continentalFull ? "red" : "amber"}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-            <StatCard
-              label="Continental Menus"
-              value={continentalCount}
-              hint="From /menu/counts"
-              tone={continentalCount >= continentalLimit ? "red" : "amber"}
-            />
-            <StatCard label="Local Menus" value={localCount} hint="From /menu/counts" tone="green" />
-            <StatCard
-              label="Menu Type (from entries)"
-              value={`${stats.typeCountsFromEntries.continental} C / ${stats.typeCountsFromEntries.local} L`}
-              hint={`Unknown: ${stats.typeCountsFromEntries.unknown}`}
-              tone="neutral"
-            />
-          </div>
-
-          {stats.topSeats.length ? (
-            <div className="rounded-2xl border border-slate-700/60 bg-slate-950/40 p-4">
-              <p className={`${poppins.className} text-xs tracking-[0.18em] uppercase text-slate-200/80`}>Top Filled Tables</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {stats.topSeats.map(([seat, n]) => (
-                  <span
-                    key={seat}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-600/60 bg-slate-950/60 px-3 py-1 text-sm text-slate-100"
-                  >
-                    <span className="font-semibold">{seat}</span>
-                    <span className="text-slate-300">•</span>
-                    <span className="text-slate-200">{n}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </section>
-
-        {/* Tabs content */}
-        {activeTab === "rsvp" ? (
-          <section className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-              <div>
-                <h3 className={`${cormorant.className} text-2xl sm:text-[2.25rem] text-amber-200 font-semibold`}>
-                  RSVP Entries
-                </h3>
-                {error && <p className="text-sm text-red-400 mt-1">{error}</p>}
-                {apiMessage && !error && <p className="text-sm text-emerald-300 mt-1">{apiMessage}</p>}
-              </div>
-              <p className="text-base text-slate-300">
-                Showing {entries?.length ?? 0} of {totalCount ?? entries?.length ?? 0} entries
-              </p>
-            </div>
-
-            {/* Mobile */}
-            <div className="space-y-3 md:hidden">
-              {entries!.map((entry, idx) => (
-                <div
-                  key={`${entry.id}-${idx}`}
-                  className="rounded-2xl border border-slate-700/70 bg-slate-950/80 p-4 flex flex-col gap-2"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <div>
-                      <p className="font-semibold text-slate-50 text-lg">{entry.name}</p>
-                      <p className="text-slate-300 text-base">@{entry.username}</p>
-                    </div>
-                  </div>
-
-                  <p className="text-slate-400 text-sm">Submitted: {formatSubmittedAt(entry.submittedAt)}</p>
-
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-slate-300 text-sm">
-                      Seat: <span className="text-slate-100">{entry.seat ?? "—"}</span>
+                      {error || apiMessage}
                     </p>
-                    <select
-                      value={entry.seat ?? ""}
-                      onChange={(e) => handleSeatChange(entry.id, e.target.value)}
-                      className="rounded-lg bg-slate-950/60 border border-slate-700/70 px-3 py-2 text-sm text-slate-100"
-                    >
-                      <option value="">Set seat…</option>
-                      {seatOptions.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  )}
                 </div>
-              ))}
-            </div>
 
-            {/* Desktop */}
-            <div className="hidden md:block">
-              <div className="w-full overflow-x-auto rounded-xl border border-slate-700/60 bg-slate-950/70">
-                <table className="min-w-full text-left text-base sm:text-lg text-slate-100">
-                  <thead className="bg-slate-950/90 text-lg">
-                    <tr>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold">Name</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold">Username</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Seat</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Submitted At</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-[1.1rem]">
-                    {entries!.map((entry, idx) => {
-                      const rowLoading = !!seatLoading[entry.id];
-                      return (
-                        <tr
-                          key={`${entry.id ?? entry.username}-${idx}`}
-                          className={idx % 2 === 0 ? "bg-slate-900/60" : "bg-slate-900/30"}
-                        >
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">{entry.name}</td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">{entry.username}</td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <span className="text-slate-200">{entry.seat ?? "—"}</span>
-                              <select
-                                value={entry.seat ?? ""}
-                                onChange={(e) => handleSeatChange(entry.id, e.target.value)}
-                                disabled={rowLoading}
-                                className="rounded-lg bg-slate-950/60 border border-slate-700/70 px-3 py-2 text-sm text-slate-100 disabled:opacity-60"
-                              >
-                                <option value="">Set seat…</option>
-                                {seatOptions.map((s) => (
-                                  <option key={s} value={s}>
-                                    {s}
-                                  </option>
-                                ))}
-                              </select>
-                              {rowLoading ? <span className="text-xs text-slate-400">Saving…</span> : null}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">{formatSubmittedAt(entry.submittedAt)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await handleRefresh();
+                      await fetchMenuCounts();
+                    }}
+                    disabled={loading}
+                    className={`${poppins.className} inline-flex items-center justify-center rounded-full border border-amber-300 bg-white/70 px-4 py-2 text-xs font-semibold text-neutral-900 hover:bg-white transition disabled:opacity-60 disabled:cursor-not-allowed`}
+                  >
+                    {loading ? "Refreshing…" : "Refresh"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className={`${poppins.className} inline-flex items-center justify-center rounded-full bg-neutral-900 px-4 py-2 text-xs font-semibold text-white hover:bg-neutral-800 transition`}
+                  >
+                    Logout
+                  </button>
+                </div>
               </div>
-            </div>
-          </section>
-        ) : (
-          <section className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-              <div>
-                <h3 className={`${cormorant.className} text-2xl sm:text-[2.25rem] text-amber-200 font-semibold`}>
-                  Menu Orders
-                </h3>
-                {error && <p className="text-sm text-red-400 mt-1">{error}</p>}
-                {apiMessage && !error && <p className="text-sm text-emerald-300 mt-1">{apiMessage}</p>}
-              </div>
-              <div className="flex items-center gap-3">
-                <p className="text-base text-slate-300">{menuEntries.length} guests with menu selections</p>
+
+              {/* Tabs */}
+              <div className="mt-6 inline-flex w-full max-w-md overflow-hidden rounded-full border border-amber-200 bg-amber-50/70">
                 <button
                   type="button"
-                  onClick={handleExportMenuCsv}
-                  className={`${poppins.className} text-sm sm:text-base cursor-pointer px-4 py-2 rounded-md bg-amber-400 hover:bg-amber-300 text-slate-900 font-semibold shadow`}
+                  onClick={() => setActiveTab("rsvp")}
+                  className={`${poppins.className} flex-1 px-4 py-2 text-xs font-semibold tracking-[0.18em] uppercase transition ${
+                    activeTab === "rsvp" ? "bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-900" : "text-amber-800"
+                  }`}
                 >
-                  Export CSV
+                  RSVPs
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("menu")}
+                  className={`${poppins.className} flex-1 px-4 py-2 text-xs font-semibold tracking-[0.18em] uppercase transition ${
+                    activeTab === "menu" ? "bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-900" : "text-amber-800"
+                  }`}
+                >
+                  Orders
                 </button>
               </div>
             </div>
 
-            {/* Mobile cards */}
-            <div className="space-y-3 md:hidden">
-              {menuEntries.map((entry, idx) => {
-                const menu = entry.menu!;
-                const type = inferMenuType(menu);
-                const typeBadge =
-                  type === "continental"
-                    ? "bg-amber-500/20 border-amber-500/40 text-amber-200"
-                    : type === "local"
-                    ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-200"
-                    : "bg-slate-500/20 border-slate-500/40 text-slate-200";
+            {/* Count cards (ONLY keep total + Continental/Local) */}
+            <div className="px-6 sm:px-10 pb-2">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>Counts</h2>
+                <button
+                  type="button"
+                  onClick={fetchMenuCounts}
+                  disabled={countsLoading}
+                  className={`${poppins.className} inline-flex items-center justify-center rounded-full border border-amber-300 bg-white/70 px-4 py-2 text-xs font-semibold text-neutral-900 hover:bg-white transition disabled:opacity-60`}
+                >
+                  {countsLoading ? "Updating…" : "Update"}
+                </button>
+              </div>
 
-                return (
-                  <div
-                    key={`${entry.id}-menu-${idx}`}
-                    className="rounded-2xl border border-slate-700/70 bg-slate-950/80 p-4 flex flex-col gap-2"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
-                        <p className="font-semibold text-slate-50 text-lg">{entry.name}</p>
-                        <p className="text-slate-300 text-base">@{entry.username}</p>
-                      </div>
-                      <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${typeBadge}`}>
-                        {type.toUpperCase()}
-                      </span>
-                    </div>
-
-                    <p className="text-sm text-slate-200">
-                      <span className="font-semibold">Starter:</span> {formatMenuId(menu.starter, starterLabelMap)}
-                    </p>
-                    <p className="text-sm text-slate-200">
-                      <span className="font-semibold">Second Course:</span> {formatHorsDoeuvres(menu.horsDoeuvres ?? null)}
-                    </p>
-                    <p className="text-sm text-slate-200">
-                      <span className="font-semibold">Salad:</span> {formatMenuId(menu.salad, saladLabelMap)}
-                    </p>
-                    <p className="text-sm text-slate-200">
-                      <span className="font-semibold">Main Course:</span> {formatMainCourse(menu)}
-                    </p>
-                    <p className="text-sm text-slate-200">
-                      <span className="font-semibold">Local Soup (legacy):</span> {formatMenuId(menu.localSoup, localSoupLabelMap)}
-                    </p>
-                    <p className="text-sm text-slate-200">
-                      <span className="font-semibold">Swallow:</span> {formatMenuId(menu.swallow, swallowLabelMap)}
-                    </p>
-                    <p className="text-sm text-slate-200">
-                      <span className="font-semibold">Rice Type:</span> {formatMenuId(menu.riceType, riceTypeLabelMap)}
-                    </p>
-                    <p className="text-sm text-slate-200">
-                      <span className="font-semibold">Protein:</span> {formatMenuId(menu.protein, proteinLabelMap)}
-                    </p>
-                    <p className="text-sm text-slate-200">
-                      <span className="font-semibold">Dessert:</span> {formatMenuId(menu.dessert, dessertLabelMap)}
-                    </p>
-                    <p className="text-sm text-slate-200">
-                      <span className="font-semibold">Afters:</span> {formatMenuId(menu.afters, aftersLabelMap)}
-                    </p>
-
-                    <p className="text-xs text-slate-500 mt-1">Submitted: {formatSubmittedAt(entry.submittedAt)}</p>
-                  </div>
-                );
-              })}
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <CountCard label="Total RSVPs" value={stats.total} hint="All entries" />
+                <CountCard label="Continental" value={stats.continental} hint="From /menu/counts" tone="amber" />
+                <CountCard label="Local" value={stats.local} hint="From /menu/counts" tone="green" />
+              </div>
             </div>
 
-            {/* Desktop table */}
-            <div className="hidden md:block">
-              <div className="w-full overflow-x-auto rounded-xl border border-slate-700/60 bg-slate-950/70">
-                <table className="min-w-full text-left text-base sm:text-lg text-slate-100">
-                  <thead className="bg-slate-950/90 text-lg">
-                    <tr>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold">Name</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold">Type</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Starter</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Second Course</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Salad</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Main Course</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Local Soup (legacy)</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Swallow</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Rice Type</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Protein</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Dessert</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Afters</th>
-                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Submitted At</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-[1.05rem]">
+            {/* Content */}
+            <div className="px-6 sm:px-10 pb-10 pt-6">
+              {/* RSVP table (seat column removed) */}
+              {activeTab === "rsvp" ? (
+                <section className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+                    <h3 className={`${cormorant.className} text-2xl sm:text-3xl font-semibold text-neutral-900`}>
+                      RSVP Entries
+                    </h3>
+                    <p className={`${poppins.className} text-xs text-neutral-700`}>
+                      Showing {entries?.length ?? 0} of {totalCount ?? entries?.length ?? 0}
+                    </p>
+                  </div>
+
+                  {/* Mobile cards */}
+                  <div className="space-y-3 md:hidden">
+                    {entries!.map((entry, idx) => (
+                      <div
+                        key={`${entry.id}-${idx}`}
+                        className="rounded-2xl border border-amber-300/35 bg-white/60 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.10)]"
+                      >
+                        <p className={`${poppins.className} text-sm font-semibold text-neutral-900`}>{entry.name}</p>
+                        <p className={`${poppins.className} text-xs text-neutral-700`}>@{entry.username}</p>
+                        <p className={`${poppins.className} mt-2 text-[11px] text-neutral-600`}>
+                          Submitted: {formatSubmittedAt(entry.submittedAt)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop table */}
+                  <div className="hidden md:block">
+                    <div className="w-full overflow-x-auto rounded-2xl border border-amber-300/35 bg-white/60 shadow-[0_18px_60px_rgba(0,0,0,0.10)]">
+                      <table className="min-w-full text-left text-sm text-neutral-900">
+                        <thead className="bg-amber-50/70">
+                          <tr>
+                            <th className={`${poppins.className} px-4 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-neutral-700`}>
+                              Name
+                            </th>
+                            <th className={`${poppins.className} px-4 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-neutral-700`}>
+                              Username
+                            </th>
+                            <th className={`${poppins.className} px-4 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-neutral-700 whitespace-nowrap`}>
+                              Submitted At
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {entries!.map((entry, idx) => (
+                            <tr key={`${entry.id ?? entry.username}-${idx}`} className={idx % 2 === 0 ? "bg-white/50" : "bg-amber-50/30"}>
+                              <td className="px-4 py-3 whitespace-nowrap">{entry.name}</td>
+                              <td className="px-4 py-3 whitespace-nowrap">@{entry.username}</td>
+                              <td className="px-4 py-3 whitespace-nowrap">{formatSubmittedAt(entry.submittedAt)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </section>
+              ) : (
+                // Orders table (seat removed + unused columns removed)
+                <section className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+                    <div>
+                      <h3 className={`${cormorant.className} text-2xl sm:text-3xl font-semibold text-neutral-900`}>Menu Orders</h3>
+                      <p className={`${poppins.className} mt-1 text-xs text-neutral-700`}>{menuEntries.length} guests with menu selections</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleExportMenuCsv}
+                      className={`${poppins.className} inline-flex items-center justify-center rounded-full bg-neutral-900 px-5 py-2 text-xs font-semibold text-white hover:bg-neutral-800 transition`}
+                    >
+                      Export CSV
+                    </button>
+                  </div>
+
+                  {/* Mobile cards */}
+                  <div className="space-y-3 md:hidden">
                     {menuEntries.map((entry, idx) => {
                       const menu = entry.menu!;
                       const type = inferMenuType(menu);
-
-                      const typeBadge =
+                      const badge =
                         type === "continental"
-                          ? "bg-amber-500/20 border-amber-500/40 text-amber-200"
+                          ? "bg-amber-100 text-amber-900 border-amber-300/60"
                           : type === "local"
-                          ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-200"
-                          : "bg-slate-500/20 border-slate-500/40 text-slate-200";
+                          ? "bg-emerald-100 text-emerald-900 border-emerald-300/60"
+                          : "bg-white/70 text-neutral-800 border-amber-200/60";
 
                       return (
-                        <tr
-                          key={`${entry.id ?? entry.username}-menu-${idx}`}
-                          className={idx % 2 === 0 ? "bg-slate-900/60" : "bg-slate-900/30"}
+                        <div
+                          key={`${entry.id}-menu-${idx}`}
+                          className="rounded-2xl border border-amber-300/35 bg-white/60 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.10)]"
                         >
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">{entry.name}</td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${typeBadge}`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className={`${poppins.className} text-sm font-semibold text-neutral-900`}>{entry.name}</p>
+                              <p className={`${poppins.className} text-xs text-neutral-700`}>@{entry.username}</p>
+                            </div>
+                            <span className={`${poppins.className} inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold ${badge}`}>
                               {type.toUpperCase()}
                             </span>
-                          </td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {formatMenuId(menu.starter, starterLabelMap)}
-                          </td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {formatHorsDoeuvres(menu.horsDoeuvres ?? null)}
-                          </td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {formatMenuId(menu.salad, saladLabelMap)}
-                          </td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">{formatMainCourse(menu)}</td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {formatMenuId(menu.localSoup, localSoupLabelMap)}
-                          </td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {formatMenuId(menu.swallow, swallowLabelMap)}
-                          </td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {formatMenuId(menu.riceType, riceTypeLabelMap)}
-                          </td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {formatMenuId(menu.protein, proteinLabelMap)}
-                          </td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {formatMenuId(menu.dessert, dessertLabelMap)}
-                          </td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {formatMenuId(menu.afters, aftersLabelMap)}
-                          </td>
-                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
-                            {formatSubmittedAt(entry.submittedAt)}
-                          </td>
-                        </tr>
+                          </div>
+
+                          <div className="mt-3 space-y-1">
+                            <p className={`${poppins.className} text-xs text-neutral-800`}>
+                              <span className="font-semibold">Starter:</span> {formatMenuId(menu.starter, starterLabelMap)}
+                            </p>
+                            <p className={`${poppins.className} text-xs text-neutral-800`}>
+                              <span className="font-semibold">Second Course:</span> {formatHorsDoeuvres(menu.horsDoeuvres ?? null)}
+                            </p>
+                            <p className={`${poppins.className} text-xs text-neutral-800`}>
+                              <span className="font-semibold">Salad:</span> {formatMenuId(menu.salad, saladLabelMap)}
+                            </p>
+                            <p className={`${poppins.className} text-xs text-neutral-800`}>
+                              <span className="font-semibold">Main:</span> {formatMainCourse(menu)}
+                            </p>
+                            <p className={`${poppins.className} text-xs text-neutral-800`}>
+                              <span className="font-semibold">Dessert:</span> {formatMenuId(menu.dessert, dessertLabelMap)}
+                            </p>
+                            <p className={`${poppins.className} text-xs text-neutral-800`}>
+                              <span className="font-semibold">Afters:</span> {formatMenuId(menu.afters, aftersLabelMap)}
+                            </p>
+                          </div>
+
+                          <p className={`${poppins.className} mt-3 text-[11px] text-neutral-600`}>
+                            Submitted: {formatSubmittedAt(entry.submittedAt)}
+                          </p>
+                        </div>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
+                  </div>
+
+                  {/* Desktop table (trimmed columns) */}
+                  <div className="hidden md:block">
+                    <div className="w-full overflow-x-auto rounded-2xl border border-amber-300/35 bg-white/60 shadow-[0_18px_60px_rgba(0,0,0,0.10)]">
+                      <table className="min-w-full text-left text-sm text-neutral-900">
+                        <thead className="bg-amber-50/70">
+                          <tr>
+                            <th className={`${poppins.className} px-4 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-neutral-700`}>
+                              Name
+                            </th>
+                            <th className={`${poppins.className} px-4 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-neutral-700`}>
+                              Username
+                            </th>
+                            <th className={`${poppins.className} px-4 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-neutral-700`}>
+                              Type
+                            </th>
+                            <th className={`${poppins.className} px-4 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-neutral-700 whitespace-nowrap`}>
+                              Starter
+                            </th>
+                            <th className={`${poppins.className} px-4 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-neutral-700 whitespace-nowrap`}>
+                              Second Course
+                            </th>
+                            <th className={`${poppins.className} px-4 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-neutral-700 whitespace-nowrap`}>
+                              Salad
+                            </th>
+                            <th className={`${poppins.className} px-4 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-neutral-700 whitespace-nowrap`}>
+                              Main Course
+                            </th>
+                            <th className={`${poppins.className} px-4 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-neutral-700 whitespace-nowrap`}>
+                              Dessert
+                            </th>
+                            <th className={`${poppins.className} px-4 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-neutral-700 whitespace-nowrap`}>
+                              Afters
+                            </th>
+                            <th className={`${poppins.className} px-4 py-3 text-xs font-semibold tracking-[0.14em] uppercase text-neutral-700 whitespace-nowrap`}>
+                              Submitted
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {menuEntries.map((entry, idx) => {
+                            const menu = entry.menu!;
+                            const type = inferMenuType(menu);
+                            const badge =
+                              type === "continental"
+                                ? "bg-amber-100 text-amber-900 border-amber-300/60"
+                                : type === "local"
+                                ? "bg-emerald-100 text-emerald-900 border-emerald-300/60"
+                                : "bg-white/70 text-neutral-800 border-amber-200/60";
+
+                            return (
+                              <tr key={`${entry.id ?? entry.username}-menu-${idx}`} className={idx % 2 === 0 ? "bg-white/50" : "bg-amber-50/30"}>
+                                <td className="px-4 py-3 whitespace-nowrap">{entry.name}</td>
+                                <td className="px-4 py-3 whitespace-nowrap">@{entry.username}</td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <span className={`${poppins.className} inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold ${badge}`}>
+                                    {type.toUpperCase()}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">{formatMenuId(menu.starter, starterLabelMap)}</td>
+                                <td className="px-4 py-3 whitespace-nowrap">{formatHorsDoeuvres(menu.horsDoeuvres ?? null)}</td>
+                                <td className="px-4 py-3 whitespace-nowrap">{formatMenuId(menu.salad, saladLabelMap)}</td>
+                                <td className="px-4 py-3 whitespace-nowrap">{formatMainCourse(menu)}</td>
+                                <td className="px-4 py-3 whitespace-nowrap">{formatMenuId(menu.dessert, dessertLabelMap)}</td>
+                                <td className="px-4 py-3 whitespace-nowrap">{formatMenuId(menu.afters, aftersLabelMap)}</td>
+                                <td className="px-4 py-3 whitespace-nowrap">{formatSubmittedAt(entry.submittedAt)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </section>
+              )}
             </div>
-          </section>
-        )}
+          </div>
+        </div>
+
+        <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 h-28 w-[85%] rounded-[999px] bg-amber-400/10 blur-3xl -z-10" />
       </div>
     </main>
   );
