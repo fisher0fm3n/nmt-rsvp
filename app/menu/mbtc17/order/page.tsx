@@ -15,6 +15,7 @@ const cormorant = Cormorant_Garamond({
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
 type MenuOption = { id: string; label: string };
+type MenuType = "local" | "continental" | "";
 
 type User = {
   id: string;
@@ -32,7 +33,9 @@ type MenuPayload = {
   salad: string | null;
   mainCourse: string | null;
   dessert: string | null;
-  afters: string | null; // we’ll store SNACKS/OTHERS here
+  afters: string | null;
+  type?: "local" | "continental" | null;
+
   appetizers?: string[] | string | null;
   localSoup?: string | null;
   swallow?: string | null;
@@ -40,85 +43,61 @@ type MenuPayload = {
   protein?: string | null;
 };
 
-/**
- * MENU (Updated)
- * Starter + Salad are fixed options (still selectable for consistency).
- * Main Course: Local + Continental (two tabs).
- * Dessert + Snacks/Others apply to both.
- */
-
-// STARTER
-const starterOptions: MenuOption[] = [
-  { id: "starter-goat-meat-pepper-soup", label: "Goat Meat Pepper Soup with Bread Rolls" },
+// -----------------------------
+// CONTINENTAL (matches image)
+// -----------------------------
+const continentalSoupOptions: MenuOption[] = [
+  { id: "continental-soup-cream-of-tomato-croton", label: "Cream of Tomato Soup with Croton" },
 ];
 
-// SALADS
-const saladOptions: MenuOption[] = [{ id: "salad-chicken-salad", label: "Chicken Salad" }];
-
-// MAIN COURSE — LOCAL
-const localMainOptions: MenuOption[] = [
-  {
-    id: "local-egusi-efo-mixed-okro-semo-poundo",
-    label: "Egusi / Efo Riro / Mixed Okro Soup with Semo / Poundo",
-  },
-  { id: "local-amala-ewedu-gbegiri", label: "Amala, Ewedu & Gbegiri" },
-  { id: "local-ofada-rice-sauce-plantain", label: "Ofada Rice / Ofada Sauce / Plantain" },
-  {
-    id: "local-jollof-rice-chicken-fish-moinmoin",
-    label: "Jollof Rice / Chicken / Fish / Moinmoin",
-  },
-  {
-    id: "local-fried-rice-chicken-fish-coleslaw",
-    label: "Fried Rice / Chicken / Fish / Coleslaw",
-  },
+const continentalAppetizerOptions: MenuOption[] = [
+  { id: "continental-app-avocado-crab-marirose", label: "Avocado Crab meat with Marirose sauce" },
 ];
 
-// MAIN COURSE — CONTINENTAL (also appears under “Local -> Continental” in your copy)
 const continentalMainOptions: MenuOption[] = [
   {
-    id: "continental-herb-roasted-chicken-basmati-nigerian-sauce",
-    label: "Herb Roasted Chicken with Snow Basmati Rice mixed with Nigerian Sauce",
+    id: "continental-main-herb-roasted-chicken-snow-basmati-nigerian-sauce",
+    label: "Herb roasted Chicken with Snow basmati rice mixed with Nigerian Sauce",
   },
   {
-    id: "continental-grilled-beef-fillet-herb-roasted-veg-jollof",
-    label: "Grilled Beef Fillet served with Herb Roasted Vegetables and Jollof Rice",
+    id: "continental-main-grilled-beef-fillet-herb-roasted-vegetable-jollof-rice",
+    label: "Grilled Beef Fillet served with Herb Roasted Vegetable and Jollof rice",
   },
 ];
 
-// DESSERT (applies to both)
-const dessertOptions: MenuOption[] = [
-  { id: "dessert-ice-cream", label: "Ice Cream" },
-  { id: "dessert-cup-cakes", label: "Cup Cakes" },
-  { id: "dessert-parfait", label: "Parfait" },
-];
-
-// SNACKS/OTHERS (applies to both) — stored as `afters`
-const snacksOptions: MenuOption[] = [
-  { id: "snacks-small-chops", label: "Small Chops" },
+const continentalDessertOptions: MenuOption[] = [
   {
-    id: "snacks-potato-plantain-fries-chicken-perri",
-    label: "Potato & Plantain Fries with Chicken and Perri Sauce (very Perri / mild)",
+    id: "continental-dessert-marshmellow-pudding-strawberry-sauce-fruit-salad",
+    label: "Marshmellow Pudding with Strawberry sauce Fruit Salad",
   },
 ];
 
-const steps = [
-  { id: 1, label: "Starter & Salad" },
-  { id: 2, label: "Main Course" },
-  { id: 3, label: "Dessert & Snacks" },
-  { id: 4, label: "Review & Confirm" },
+// -----------------------------
+// LOCAL (matches image)
+// -----------------------------
+const localStarterOptions: MenuOption[] = [
+  { id: "local-starter-goat-meat-pepper-soup-bread-rolls", label: "Goat meat Pepper Soup with Bread Rolls" },
 ];
 
-type MainCategory = "local" | "continental";
+const localSaladOptions: MenuOption[] = [{ id: "local-salad-chicken-salad", label: "Chicken Salad" }];
 
-function CornerOrnament({
-  className = "",
-  flipX = false,
-  flipY = false,
-}: {
-  className?: string;
-  flipX?: boolean;
-  flipY?: boolean;
-}) {
+const localMainOptions: MenuOption[] = [
+  { id: "local-main-egunsi-efo-riro-mixed-okro-semo-poundo", label: "Egunsi/Efo Riro/Mixed Okro Soup with Semo/Poundo" },
+  { id: "local-main-amala-ewedu-gbegiri", label: "Amala, Ewedu, Gbegiri" },
+  { id: "local-main-ofada-rice-ofada-sauce-plantain", label: "Ofada Rice/Ofada Sauce/Plantain" },
+  { id: "local-main-jollof-rice-chicken-fish-moinmoin", label: "Jollof Rice/Chicken/Fish/Moinmoin" },
+  { id: "local-main-fried-rice-chicken-fish-coleslaw", label: "Fried Rice/Chicken/Fish/Coleslaw" },
+];
+
+const localDessertOptions: MenuOption[] = [
+  { id: "local-dessert-ice-cream", label: "Ice Cream" },
+  { id: "local-dessert-cupcakes", label: "Cupcakes" },
+  { id: "local-dessert-parfait", label: "Parfait" },
+];
+
+const localSnacksOptions: MenuOption[] = [{ id: "local-snacks-small-chops", label: "Small Chops" }];
+
+function CornerOrnament({ className = "", flipX = false, flipY = false }: { className?: string; flipX?: boolean; flipY?: boolean }) {
   const transform = `${flipX ? "-scale-x-100" : ""} ${flipY ? "-scale-y-100" : ""}`.trim();
   return (
     <div className={`pointer-events-none absolute ${className}`}>
@@ -147,26 +126,9 @@ function CornerOrnament({
           </radialGradient>
         </defs>
 
-        <path
-          d="M18 206c62-26 86-77 106-121 20-44 44-73 98-77"
-          stroke="url(#g)"
-          strokeWidth="3.4"
-          strokeLinecap="round"
-        />
-        <path
-          d="M28 220c58-20 82-67 103-112 21-45 49-84 104-90"
-          stroke="url(#g)"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          opacity="0.85"
-        />
-        <path
-          d="M26 190c48-14 77-44 97-86 20-42 41-70 100-76"
-          stroke="url(#g)"
-          strokeWidth="2"
-          strokeLinecap="round"
-          opacity="0.65"
-        />
+        <path d="M18 206c62-26 86-77 106-121 20-44 44-73 98-77" stroke="url(#g)" strokeWidth="3.4" strokeLinecap="round" />
+        <path d="M28 220c58-20 82-67 103-112 21-45 49-84 104-90" stroke="url(#g)" strokeWidth="2.4" strokeLinecap="round" opacity="0.85" />
+        <path d="M26 190c48-14 77-44 97-86 20-42 41-70 100-76" stroke="url(#g)" strokeWidth="2" strokeLinecap="round" opacity="0.65" />
 
         {[
           [170, 78],
@@ -201,16 +163,21 @@ export default function MenuSelectionPage() {
   const router = useRouter();
   const { user } = useAuth() as { user: User | null };
 
+  const [menuType, setMenuType] = useState<MenuType>("");
+  const [initialSavedType, setInitialSavedType] = useState<MenuType>(""); // ✅ remember what they previously had
+
+  // selections
   const [starter, setStarter] = useState("");
   const [salad, setSalad] = useState("");
-
-  const [selectedCategory, setSelectedCategory] = useState<MainCategory>("local");
-  const [localMain, setLocalMain] = useState("");
-  const [continentalMain, setContinentalMain] = useState("");
   const [mainCourse, setMainCourse] = useState("");
-
   const [dessert, setDessert] = useState("");
-  const [snacks, setSnacks] = useState(""); // stored as afters
+  const [snacks, setSnacks] = useState("");
+
+  // counts + limit
+  const [countsLoading, setCountsLoading] = useState(true);
+  const [continentalCount, setContinentalCount] = useState<number>(0);
+  const [localCount, setLocalCount] = useState<number>(0);
+  const [continentalLimit, setContinentalLimit] = useState<number>(100);
 
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -221,17 +188,67 @@ export default function MenuSelectionPage() {
     if (!user) router.replace("/menu/mbtc17");
   }, [user, router]);
 
+  const isDisabled = submitting || success || loadingProfile;
+
+  const steps = useMemo(
+    () => [
+      { id: 1, label: "Choose Menu Type" },
+      { id: 2, label: menuType === "continental" ? "Soup & Appetizers" : "Starter & Salad" },
+      { id: 3, label: "Main" },
+      { id: 4, label: menuType === "continental" ? "Dessert" : "Dessert & Snacks" },
+      { id: 5, label: "Review & Confirm" },
+    ],
+    [menuType]
+  );
+
+  const totalSteps = steps.length;
+  const progressPercent = ((currentStep - 1) / (totalSteps - 1 || 1)) * 100;
+
+  const fieldClass =
+    "w-full mt-2 rounded-xl border border-amber-300/45 bg-white/70 px-4 py-3 text-sm text-neutral-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400";
+
+  const optionLabel = (id: string | null | undefined, options: MenuOption[]) =>
+    id ? options.find((o) => o.id === id)?.label || "" : "";
+
   const setDefaultsIfEmpty = () => {
+    setMenuType("");
+    setInitialSavedType("");
     setStarter("");
     setSalad("");
-    setSelectedCategory("local");
-    setLocalMain("");
-    setContinentalMain("");
     setMainCourse("");
     setDessert("");
     setSnacks("");
   };
 
+  // ✅ Fetch counts (limit info)
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        setCountsLoading(true);
+        const res = await fetch("https://pcdl.co/api/nmt/rsvp/menu/counts", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
+          },
+        });
+        if (!res.ok) throw new Error("Failed to load menu counts");
+        const json = await res.json();
+        const data = json?.data || {};
+        setContinentalCount(Number(data.continentalCount || 0));
+        setLocalCount(Number(data.localCount || 0));
+        setContinentalLimit(Number(data.continentalLimit || 100));
+      } catch {
+        // keep defaults; don’t hard-block UI
+      } finally {
+        setCountsLoading(false);
+      }
+    };
+
+    fetchCounts();
+  }, []);
+
+  // Load saved selections + infer/read type
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user?.id) {
@@ -265,25 +282,32 @@ export default function MenuSelectionPage() {
           return;
         }
 
-        setStarter(menu.starter || "");
-        setSalad(menu.salad || "");
-        setMainCourse(menu.mainCourse || "");
-        setDessert(menu.dessert || "");
-        setSnacks(menu.afters || "");
+        const savedMain = menu.mainCourse || "";
+        const savedStarter = menu.starter || "";
+        const savedSalad = menu.salad || "";
+        const savedDessert = menu.dessert || "";
+        const savedAfters = menu.afters || "";
 
-        const mc = menu.mainCourse || "";
-        if (localMainOptions.some((o) => o.id === mc)) {
-          setSelectedCategory("local");
-          setLocalMain(mc);
-        } else if (continentalMainOptions.some((o) => o.id === mc)) {
-          setSelectedCategory("continental");
-          setContinentalMain(mc);
-        } else {
-          setSelectedCategory("local");
-          setLocalMain("");
-          setContinentalMain("");
-          setMainCourse("");
-        }
+        const savedType = (menu as any)?.type as MenuType | undefined;
+
+        const isContinental =
+          continentalMainOptions.some((o) => o.id === savedMain) ||
+          continentalSoupOptions.some((o) => o.id === savedStarter) ||
+          continentalAppetizerOptions.some((o) => o.id === savedSalad) ||
+          continentalDessertOptions.some((o) => o.id === savedDessert) ||
+          (typeof savedMain === "string" && savedMain.startsWith("continental-"));
+
+        const inferredType: MenuType =
+          savedType === "local" || savedType === "continental" ? savedType : isContinental ? "continental" : "local";
+
+        setMenuType(inferredType);
+        setInitialSavedType(inferredType); // ✅ remember what they had
+
+        setStarter(savedStarter);
+        setSalad(savedSalad);
+        setMainCourse(savedMain);
+        setDessert(savedDessert);
+        setSnacks(inferredType === "local" ? savedAfters : "");
       } catch {
         setDefaultsIfEmpty();
       } finally {
@@ -295,62 +319,64 @@ export default function MenuSelectionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const fieldClass =
-    "w-full mt-2 rounded-xl border border-amber-300/45 bg-white/70 px-4 py-3 text-sm text-neutral-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400";
+  const continentalRemaining = Math.max(0, continentalLimit - continentalCount);
+  const continentalIsFull = continentalCount >= continentalLimit;
 
-  const isDisabled = submitting || success || loadingProfile;
+  // ✅ Block new continental selection if full (but allow existing continental users)
+  const canChooseContinental = !continentalIsFull || initialSavedType === "continental";
 
-  const totalSteps = steps.length;
-  const progressPercent = ((currentStep - 1) / (totalSteps - 1 || 1)) * 100;
+  const resetSelectionsForMenuType = (nextType: MenuType) => {
+    setMenuType(nextType);
+    setStarter("");
+    setSalad("");
+    setMainCourse("");
+    setDessert("");
+    setSnacks("");
+  };
 
-  const optionLabel = (id: string | null | undefined, options: MenuOption[]) =>
-    id ? options.find((o) => o.id === id)?.label || "" : "";
-
+  // ---------- Validation ----------
   const validateStep1 = () => {
-    if (!starter) {
-      alert("Please select your Starter.");
+    if (!menuType) {
+      alert("Please choose LOCAL or CONTINENTAL to begin.");
       return false;
     }
-    if (!salad) {
-      alert("Please select your Salad.");
+    if (menuType === "continental" && !canChooseContinental) {
+      alert(`Continental is fully booked (limit ${continentalLimit}). Please choose Local.`);
       return false;
     }
     return true;
   };
 
   const validateStep2 = () => {
-    if (!mainCourse) {
-      alert("Please select a Main Course.");
-      return false;
+    if (!menuType) return false;
+
+    if (menuType === "continental") {
+      if (!starter) return alert("Please select your Soup (Continental)."), false;
+      if (!salad) return alert("Please select your Appetizer (Continental)."), false;
+      return true;
     }
+
+    if (!starter) return alert("Please select your Starter (Local)."), false;
+    if (!salad) return alert("Please select your Salad (Local)."), false;
     return true;
   };
 
   const validateStep3 = () => {
-    if (!dessert) {
-      alert("Please select a Dessert.");
-      return false;
-    }
-    if (!snacks) {
-      alert("Please select a Snacks/Others option.");
-      return false;
-    }
+    if (!mainCourse) return alert("Please select your Main."), false;
+    return true;
+  };
+
+  const validateStep4 = () => {
+    if (!dessert) return alert("Please select your Dessert."), false;
+    if (menuType === "local" && !snacks) return alert("Please select your Snacks (Local)."), false;
     return true;
   };
 
   const validateAll = () => {
-    if (!validateStep1()) {
-      setCurrentStep(1);
-      return false;
-    }
-    if (!validateStep2()) {
-      setCurrentStep(2);
-      return false;
-    }
-    if (!validateStep3()) {
-      setCurrentStep(3);
-      return false;
-    }
+    if (!validateStep1()) return setCurrentStep(1), false;
+    if (!validateStep2()) return setCurrentStep(2), false;
+    if (!validateStep3()) return setCurrentStep(3), false;
+    if (!validateStep4()) return setCurrentStep(4), false;
     return true;
   };
 
@@ -359,6 +385,7 @@ export default function MenuSelectionPage() {
     if (currentStep === 1 && !validateStep1()) return;
     if (currentStep === 2 && !validateStep2()) return;
     if (currentStep === 3 && !validateStep3()) return;
+    if (currentStep === 4 && !validateStep4()) return;
     setCurrentStep((p) => (p < totalSteps ? p + 1 : p));
   };
 
@@ -380,12 +407,14 @@ export default function MenuSelectionPage() {
         },
         body: JSON.stringify({
           id: user.id,
+          type: menuType || null, // ✅ pass to API
+
           starter: starter || null,
           salad: salad || null,
           mainCourse: mainCourse || null,
           dessert: dessert || null,
-          afters: snacks || null, // SNACKS/OTHERS
-          // keep legacy keys null to avoid breaking backend expectations
+          afters: menuType === "local" ? snacks || null : null,
+
           localSoup: null,
           swallow: null,
           riceType: null,
@@ -396,6 +425,31 @@ export default function MenuSelectionPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
+
+        // ✅ nice handling for full continental
+        if (res.status === 409 && data?.code === "CONTINENTAL_LIMIT_REACHED") {
+          alert(data?.error || `Continental menu is fully booked (limit ${continentalLimit}). Please choose Local.`);
+          // refresh counts so UI updates
+          try {
+            const cRes = await fetch("https://pcdl.co/api/nmt/rsvp/menu/counts", {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                "x-api-key": "sfWryh0mscQzn0TcFvdz4smp8abRSZLlMo1qpK7UQNoWAw30A9yNbRjL0RMUS741",
+              },
+            });
+            const cJson = await cRes.json().catch(() => null);
+            const cData = cJson?.data || {};
+            setContinentalCount(Number(cData.continentalCount || continentalCount));
+            setLocalCount(Number(cData.localCount || localCount));
+            setContinentalLimit(Number(cData.continentalLimit || continentalLimit));
+          } catch {}
+          // kick them back to step 1
+          setCurrentStep(1);
+          setMenuType("");
+          return;
+        }
+
         throw new Error(data?.error || data?.message || `Failed to save (status ${res.status})`);
       }
 
@@ -407,9 +461,13 @@ export default function MenuSelectionPage() {
     }
   };
 
+  const starterPool = menuType === "continental" ? continentalSoupOptions : localStarterOptions;
+  const saladPool = menuType === "continental" ? continentalAppetizerOptions : localSaladOptions;
+  const mainPool = menuType === "continental" ? continentalMainOptions : localMainOptions;
+  const dessertPool = menuType === "continental" ? continentalDessertOptions : localDessertOptions;
+
   return (
     <main className="relative min-h-screen w-full overflow-hidden px-4 py-10">
-      {/* Deep green + gold vibe (matches banner) */}
       <div className="absolute inset-0 -z-20 bg-[radial-gradient(1200px_800px_at_20%_10%,rgba(20,83,45,0.75),transparent_60%),radial-gradient(1000px_700px_at_85%_25%,rgba(6,95,70,0.55),transparent_58%),radial-gradient(900px_650px_at_40%_90%,rgba(22,78,99,0.35),transparent_55%),linear-gradient(135deg,#052e23_0%,#064e3b_45%,#052e23_100%)]" />
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(800px_500px_at_50%_30%,rgba(250,204,21,0.08),transparent_60%)]" />
 
@@ -428,9 +486,10 @@ export default function MenuSelectionPage() {
                 MBTC 17 BANQUET
               </h1>
               <OrnateDivider />
+
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                 <p className={`${poppins.className} text-sm text-neutral-700`}>
-                  Complete the steps below to confirm your choices.
+                  Choose <span className="font-semibold">LOCAL</span> or <span className="font-semibold">CONTINENTAL</span> first (cannot be mixed).
                 </p>
                 <button
                   type="button"
@@ -439,6 +498,25 @@ export default function MenuSelectionPage() {
                 >
                   ← Back
                 </button>
+              </div>
+
+              {/* ✅ Capacity line */}
+              <div className="mt-4 text-center">
+                <p className={`${poppins.className} text-[12px] text-neutral-700`}>
+                  {countsLoading ? (
+                    "Loading capacity…"
+                  ) : (
+                    <>
+                      Continental spots remaining:{" "}
+                      <span className="font-semibold">
+                        {continentalRemaining}/{continentalLimit}
+                      </span>
+                      {continentalIsFull && (
+                        <span className="ml-2 font-semibold text-red-700">• FULL</span>
+                      )}
+                    </>
+                  )}
+                </p>
               </div>
             </div>
 
@@ -472,33 +550,51 @@ export default function MenuSelectionPage() {
                 {/* Step 1 */}
                 {currentStep === 1 && (
                   <div className="rounded-2xl border border-amber-300/35 bg-white/60 p-5 sm:p-6 shadow-[0_18px_60px_rgba(0,0,0,0.14)]">
-                    <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>Starter & Salad</h2>
+                    <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>Choose Menu Type</h2>
                     <OrnateDivider />
 
-                    <div className="grid gap-5 sm:grid-cols-2">
-                      <div>
-                        <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>Starter</label>
-                        <select className={fieldClass} value={starter} onChange={(e) => setStarter(e.target.value)} disabled={isDisabled}>
-                          <option value="">Select starter</option>
-                          {starterOptions.map((opt) => (
-                            <option key={opt.id} value={opt.id}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        disabled={isDisabled || !canChooseContinental}
+                        onClick={() => {
+                          if (!canChooseContinental) {
+                            alert(`Continental is fully booked (limit ${continentalLimit}). Please choose Local.`);
+                            return;
+                          }
+                          resetSelectionsForMenuType("continental");
+                          setCurrentStep(2);
+                        }}
+                        className={`${poppins.className} rounded-2xl border px-5 py-5 text-left transition shadow-sm ${
+                          menuType === "continental"
+                            ? "border-amber-500 bg-amber-50/80"
+                            : "border-amber-200 bg-white/70 hover:bg-white"
+                        } ${!canChooseContinental ? "opacity-60 cursor-not-allowed" : ""}`}
+                      >
+                        <p className="text-xs font-semibold tracking-[0.18em] uppercase text-amber-900">CONTINENTAL</p>
+                        <p className="mt-2 text-sm text-neutral-800">Soup, Appetizers, Main, Dessert.</p>
+                        <p className="mt-3 text-[12px] text-neutral-600">
+                          {canChooseContinental
+                            ? "Local items will be hidden."
+                            : "Fully booked — please choose Local."}
+                        </p>
+                      </button>
 
-                      <div>
-                        <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>Salad</label>
-                        <select className={fieldClass} value={salad} onChange={(e) => setSalad(e.target.value)} disabled={isDisabled}>
-                          <option value="">Select salad</option>
-                          {saladOptions.map((opt) => (
-                            <option key={opt.id} value={opt.id}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      <button
+                        type="button"
+                        disabled={isDisabled}
+                        onClick={() => {
+                          resetSelectionsForMenuType("local");
+                          setCurrentStep(2);
+                        }}
+                        className={`${poppins.className} rounded-2xl border px-5 py-5 text-left transition shadow-sm ${
+                          menuType === "local" ? "border-amber-500 bg-amber-50/80" : "border-amber-200 bg-white/70 hover:bg-white"
+                        }`}
+                      >
+                        <p className="text-xs font-semibold tracking-[0.18em] uppercase text-amber-900">LOCAL</p>
+                        <p className="mt-2 text-sm text-neutral-800">Starter, Salad, Main, Dessert, Snacks.</p>
+                        <p className="mt-3 text-[12px] text-neutral-600">Continental items will be hidden.</p>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -506,74 +602,42 @@ export default function MenuSelectionPage() {
                 {/* Step 2 */}
                 {currentStep === 2 && (
                   <div className="rounded-2xl border border-amber-300/35 bg-white/60 p-5 sm:p-6 shadow-[0_18px_60px_rgba(0,0,0,0.14)]">
-                    <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>Main Course</h2>
+                    <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>
+                      {menuType === "continental" ? "Soup & Appetizers (Continental)" : "Starter & Salad (Local)"}
+                    </h2>
                     <OrnateDivider />
 
-                    <div className="flex overflow-hidden rounded-full border border-amber-200 bg-amber-50/70 text-[11px] sm:text-xs">
-                      {[
-                        { id: "local", label: "LOCAL" },
-                        { id: "continental", label: "CONTINENTAL" },
-                      ].map((tab) => (
-                        <button
-                          key={tab.id}
-                          type="button"
-                          onClick={() => setSelectedCategory(tab.id as MainCategory)}
-                          className={`${poppins.className} flex-1 px-3 py-2 font-semibold tracking-[0.18em] uppercase transition ${
-                            selectedCategory === tab.id ? "bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-900" : "text-amber-800"
-                          }`}
-                        >
-                          {tab.label}
-                        </button>
-                      ))}
-                    </div>
+                    {!menuType ? (
+                      <p className={`${poppins.className} text-sm text-neutral-700`}>Please go back and choose a menu type.</p>
+                    ) : (
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <div>
+                          <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>
+                            {menuType === "continental" ? "Soup" : "Starter"} <span className="text-red-600">*</span>
+                          </label>
+                          <select className={fieldClass} value={starter} onChange={(e) => setStarter(e.target.value)} disabled={isDisabled}>
+                            <option value="">{menuType === "continental" ? "Select soup" : "Select starter"}</option>
+                            {(menuType === "continental" ? continentalSoupOptions : localStarterOptions).map((opt) => (
+                              <option key={opt.id} value={opt.id}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                    {selectedCategory === "local" && (
-                      <div className="mt-4">
-                        <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>
-                          Local Main Course <span className="text-red-600">*</span>
-                        </label>
-                        <select
-                          className={fieldClass}
-                          value={localMain}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setLocalMain(v);
-                            setMainCourse(v);
-                          }}
-                          disabled={isDisabled}
-                        >
-                          <option value="">Select local main course</option>
-                          {localMainOptions.map((opt) => (
-                            <option key={opt.id} value={opt.id}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    {selectedCategory === "continental" && (
-                      <div className="mt-4">
-                        <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>
-                          Continental Main Course <span className="text-red-600">*</span>
-                        </label>
-                        <select
-                          className={fieldClass}
-                          value={continentalMain}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setContinentalMain(v);
-                            setMainCourse(v);
-                          }}
-                          disabled={isDisabled}
-                        >
-                          <option value="">Select continental main course</option>
-                          {continentalMainOptions.map((opt) => (
-                            <option key={opt.id} value={opt.id}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
+                        <div>
+                          <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>
+                            {menuType === "continental" ? "Appetizers" : "Salad"} <span className="text-red-600">*</span>
+                          </label>
+                          <select className={fieldClass} value={salad} onChange={(e) => setSalad(e.target.value)} disabled={isDisabled}>
+                            <option value="">{menuType === "continental" ? "Select appetizers" : "Select salad"}</option>
+                            {(menuType === "continental" ? continentalAppetizerOptions : localSaladOptions).map((opt) => (
+                              <option key={opt.id} value={opt.id}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -582,74 +646,115 @@ export default function MenuSelectionPage() {
                 {/* Step 3 */}
                 {currentStep === 3 && (
                   <div className="rounded-2xl border border-amber-300/35 bg-white/60 p-5 sm:p-6 shadow-[0_18px_60px_rgba(0,0,0,0.14)]">
-                    <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>Dessert & Snacks</h2>
+                    <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>Main</h2>
                     <OrnateDivider />
 
-                    <div className="grid gap-5 sm:grid-cols-2">
+                    {!menuType ? (
+                      <p className={`${poppins.className} text-sm text-neutral-700`}>Please go back and choose a menu type.</p>
+                    ) : (
                       <div>
-                        <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>Dessert</label>
-                        <select className={fieldClass} value={dessert} onChange={(e) => setDessert(e.target.value)} disabled={isDisabled}>
-                          <option value="">Select dessert</option>
-                          {dessertOptions.map((opt) => (
+                        <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>
+                          {menuType === "continental" ? "Continental Main" : "Local Main"} <span className="text-red-600">*</span>
+                        </label>
+                        <select className={fieldClass} value={mainCourse} onChange={(e) => setMainCourse(e.target.value)} disabled={isDisabled}>
+                          <option value="">{menuType === "continental" ? "Select continental main" : "Select local main"}</option>
+                          {(menuType === "continental" ? continentalMainOptions : localMainOptions).map((opt) => (
                             <option key={opt.id} value={opt.id}>
                               {opt.label}
                             </option>
                           ))}
                         </select>
                       </div>
-
-                      <div>
-                        <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>Snacks / Others</label>
-                        <select className={fieldClass} value={snacks} onChange={(e) => setSnacks(e.target.value)} disabled={isDisabled}>
-                          <option value="">Select snacks/others</option>
-                          {snacksOptions.map((opt) => (
-                            <option key={opt.id} value={opt.id}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 )}
 
                 {/* Step 4 */}
                 {currentStep === 4 && (
                   <div className="rounded-2xl border border-amber-300/35 bg-white/60 p-5 sm:p-6 shadow-[0_18px_60px_rgba(0,0,0,0.14)]">
+                    <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>
+                      {menuType === "continental" ? "Dessert (Continental)" : "Dessert & Snacks (Local)"}
+                    </h2>
+                    <OrnateDivider />
+
+                    {!menuType ? (
+                      <p className={`${poppins.className} text-sm text-neutral-700`}>Please go back and choose a menu type.</p>
+                    ) : (
+                      <div className={`grid gap-5 ${menuType === "local" ? "sm:grid-cols-2" : ""}`}>
+                        <div>
+                          <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>
+                            Dessert <span className="text-red-600">*</span>
+                          </label>
+                          <select className={fieldClass} value={dessert} onChange={(e) => setDessert(e.target.value)} disabled={isDisabled}>
+                            <option value="">Select dessert</option>
+                            {(menuType === "continental" ? continentalDessertOptions : localDessertOptions).map((opt) => (
+                              <option key={opt.id} value={opt.id}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {menuType === "local" && (
+                          <div>
+                            <label className={`${poppins.className} text-sm font-medium text-neutral-800`}>
+                              Snacks <span className="text-red-600">*</span>
+                            </label>
+                            <select className={fieldClass} value={snacks} onChange={(e) => setSnacks(e.target.value)} disabled={isDisabled}>
+                              <option value="">Select snacks</option>
+                              {localSnacksOptions.map((opt) => (
+                                <option key={opt.id} value={opt.id}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Step 5 */}
+                {currentStep === 5 && (
+                  <div className="rounded-2xl border border-amber-300/35 bg-white/60 p-5 sm:p-6 shadow-[0_18px_60px_rgba(0,0,0,0.14)]">
                     <h2 className={`${cormorant.className} text-xl sm:text-2xl font-semibold text-neutral-900`}>Review & Confirm</h2>
                     <OrnateDivider />
 
-                    <div className="space-y-3">
-                      <div className="rounded-xl border border-amber-200/50 bg-amber-50/60 p-4">
-                        <dl className={`${poppins.className} text-sm space-y-3`}>
-                          <div className="grid grid-cols-[120px,1fr] gap-3">
-                            <dt className="font-semibold text-amber-900">Starter</dt>
-                            <dd className="text-neutral-900">{optionLabel(starter, starterOptions) || "—"}</dd>
-                          </div>
-                          <div className="grid grid-cols-[120px,1fr] gap-3">
-                            <dt className="font-semibold text-amber-900">Salad</dt>
-                            <dd className="text-neutral-900">{optionLabel(salad, saladOptions) || "—"}</dd>
-                          </div>
-                          <div className="grid grid-cols-[120px,1fr] gap-3">
-                            <dt className="font-semibold text-amber-900">Main Course</dt>
-                            <dd className="text-neutral-900">
-                              {optionLabel(mainCourse, [...localMainOptions, ...continentalMainOptions]) || "—"}
-                            </dd>
-                          </div>
-                          <div className="grid grid-cols-[120px,1fr] gap-3">
-                            <dt className="font-semibold text-amber-900">Dessert</dt>
-                            <dd className="text-neutral-900">{optionLabel(dessert, dessertOptions) || "—"}</dd>
-                          </div>
-                          <div className="grid grid-cols-[120px,1fr] gap-3">
-                            <dt className="font-semibold text-amber-900">Snacks</dt>
-                            <dd className="text-neutral-900">{optionLabel(snacks, snacksOptions) || "—"}</dd>
-                          </div>
-                        </dl>
-                      </div>
+                    <div className="rounded-xl border border-amber-200/50 bg-amber-50/60 p-4">
+                      <dl className={`${poppins.className} text-sm space-y-3`}>
+                        <div className="grid grid-cols-[140px,1fr] gap-3">
+                          <dt className="font-semibold text-amber-900">Menu Type</dt>
+                          <dd className="text-neutral-900">{menuType ? menuType.toUpperCase() : "—"}</dd>
+                        </div>
 
-                      {loadingProfile && !success && (
-                        <p className={`${poppins.className} text-[11px] text-neutral-700`}>Loading your previous selections…</p>
-                      )}
+                        <div className="grid grid-cols-[140px,1fr] gap-3">
+                          <dt className="font-semibold text-amber-900">{menuType === "continental" ? "Soup" : "Starter"}</dt>
+                          <dd className="text-neutral-900">{optionLabel(starter, starterPool) || "—"}</dd>
+                        </div>
+
+                        <div className="grid grid-cols-[140px,1fr] gap-3">
+                          <dt className="font-semibold text-amber-900">{menuType === "continental" ? "Appetizers" : "Salad"}</dt>
+                          <dd className="text-neutral-900">{optionLabel(salad, saladPool) || "—"}</dd>
+                        </div>
+
+                        <div className="grid grid-cols-[140px,1fr] gap-3">
+                          <dt className="font-semibold text-amber-900">Main</dt>
+                          <dd className="text-neutral-900">{optionLabel(mainCourse, mainPool) || "—"}</dd>
+                        </div>
+
+                        <div className="grid grid-cols-[140px,1fr] gap-3">
+                          <dt className="font-semibold text-amber-900">Dessert</dt>
+                          <dd className="text-neutral-900">{optionLabel(dessert, dessertPool) || "—"}</dd>
+                        </div>
+
+                        {menuType === "local" && (
+                          <div className="grid grid-cols-[140px,1fr] gap-3">
+                            <dt className="font-semibold text-amber-900">Snacks</dt>
+                            <dd className="text-neutral-900">{optionLabel(snacks, localSnacksOptions) || "—"}</dd>
+                          </div>
+                        )}
+                      </dl>
                     </div>
                   </div>
                 )}

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 // const BASE_URL =
 //   process.env.NEXT_PUBLIC_APP_URL || "https://nmt-rsvp.netlify.app";
-  const BASE_URL = "https://minprogs.loveworldapis.com";
+  const BASE_URL = "http://localhost:3000";
 
 export async function POST(req: NextRequest) {
   try {

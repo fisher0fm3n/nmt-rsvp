@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 // const BASE_ORIGIN = "https://nmt-rsvp.netlify.app";
-  const BASE_ORIGIN = "https://minprogs.loveworldapis.com";
+  const BASE_ORIGIN = "http://localhost:3000";
 
 const BASE_SUCCESS_PATH = "/rsvp/success";
 const BASE_ERROR_PATH = "/rsvp/error";
