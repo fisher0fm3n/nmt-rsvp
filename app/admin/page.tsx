@@ -180,6 +180,7 @@ type Entry = {
   email?: string | null;
   attendance?: string | null;
   submittedAt?: string;
+  seat?: string | null;
   menu?: Menu | null;
 };
 
@@ -526,6 +527,7 @@ export default function AdminRsvpPage() {
     const header = [
       "Name",
       "Username",
+      "Seat",
       "Menu Type",
       "Starter",
       "Second Course",
@@ -546,6 +548,7 @@ export default function AdminRsvpPage() {
       return [
         entry.name ?? "",
         entry.username ?? "",
+        entry.seat ?? "",
         type,
         formatMenuId(menu.starter, starterLabelMap),
         formatHorsDoeuvres(menu.horsDoeuvres ?? null),
@@ -823,9 +826,9 @@ export default function AdminRsvpPage() {
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
             <StatCard label="Total RSVPs" value={stats.total} hint="All entries" tone="neutral" />
             <StatCard label="Menu Submitted" value={stats.withMenu} hint="Guests w/ menu" tone="blue" />
-            {/* <StatCard label="Attendance: Yes" value={stats.yes} hint="Confirmed attending" tone="green" /> */}
-            {/* <StatCard label="Attendance: No" value={stats.no} hint="Not attending" tone="red" /> */}
-            {/* <StatCard label="Seat Assigned" value={stats.withSeat} hint={`Unassigned: ${stats.noSeat}`} tone="purple" /> */}
+            <StatCard label="Attendance: Yes" value={stats.yes} hint="Confirmed attending" tone="green" />
+            <StatCard label="Attendance: No" value={stats.no} hint="Not attending" tone="red" />
+            <StatCard label="Seat Assigned" value={stats.withSeat} hint={`Unassigned: ${stats.noSeat}`} tone="purple" />
             <StatCard
               label="Continental Remaining"
               value={`${stats.continentalRemaining}/${continentalLimit}`}
@@ -842,15 +845,15 @@ export default function AdminRsvpPage() {
               tone={continentalCount >= continentalLimit ? "red" : "amber"}
             />
             <StatCard label="Local Menus" value={localCount} hint="From /menu/counts" tone="green" />
-            {/* <StatCard
+            <StatCard
               label="Menu Type (from entries)"
               value={`${stats.typeCountsFromEntries.continental} C / ${stats.typeCountsFromEntries.local} L`}
               hint={`Unknown: ${stats.typeCountsFromEntries.unknown}`}
               tone="neutral"
-            /> */}
+            />
           </div>
 
-          {/* {stats.topSeats.length ? (
+          {stats.topSeats.length ? (
             <div className="rounded-2xl border border-slate-700/60 bg-slate-950/40 p-4">
               <p className={`${poppins.className} text-xs tracking-[0.18em] uppercase text-slate-200/80`}>Top Filled Tables</p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -866,7 +869,7 @@ export default function AdminRsvpPage() {
                 ))}
               </div>
             </div>
-          ) : null} */}
+          ) : null}
         </section>
 
         {/* Tabs content */}
@@ -900,6 +903,24 @@ export default function AdminRsvpPage() {
                   </div>
 
                   <p className="text-slate-400 text-sm">Submitted: {formatSubmittedAt(entry.submittedAt)}</p>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-slate-300 text-sm">
+                      Seat: <span className="text-slate-100">{entry.seat ?? "—"}</span>
+                    </p>
+                    <select
+                      value={entry.seat ?? ""}
+                      onChange={(e) => handleSeatChange(entry.id, e.target.value)}
+                      className="rounded-lg bg-slate-950/60 border border-slate-700/70 px-3 py-2 text-sm text-slate-100"
+                    >
+                      <option value="">Set seat…</option>
+                      {seatOptions.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               ))}
             </div>
@@ -912,6 +933,7 @@ export default function AdminRsvpPage() {
                     <tr>
                       <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold">Name</th>
                       <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold">Username</th>
+                      <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Seat</th>
                       <th className="px-4 py-3 sm:px-5 sm:py-4 font-semibold whitespace-nowrap">Submitted At</th>
                     </tr>
                   </thead>
@@ -925,6 +947,25 @@ export default function AdminRsvpPage() {
                         >
                           <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">{entry.name}</td>
                           <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">{entry.username}</td>
+                          <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-200">{entry.seat ?? "—"}</span>
+                              <select
+                                value={entry.seat ?? ""}
+                                onChange={(e) => handleSeatChange(entry.id, e.target.value)}
+                                disabled={rowLoading}
+                                className="rounded-lg bg-slate-950/60 border border-slate-700/70 px-3 py-2 text-sm text-slate-100 disabled:opacity-60"
+                              >
+                                <option value="">Set seat…</option>
+                                {seatOptions.map((s) => (
+                                  <option key={s} value={s}>
+                                    {s}
+                                  </option>
+                                ))}
+                              </select>
+                              {rowLoading ? <span className="text-xs text-slate-400">Saving…</span> : null}
+                            </div>
+                          </td>
                           <td className="px-4 py-3 sm:px-5 sm:py-4 whitespace-nowrap">{formatSubmittedAt(entry.submittedAt)}</td>
                         </tr>
                       );
