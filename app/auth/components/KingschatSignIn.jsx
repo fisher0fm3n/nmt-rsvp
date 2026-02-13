@@ -2,7 +2,7 @@
 
 /* eslint-disable */
 const CLIENT_ID = "com.kingschat";
-const REDIRECT_URI = "http://localhost:3000/api/kingschat/callback";
+const REDIRECT_URI = "https://minprogs.loveworldapis.com/api/kingschat/callback";
 // const REDIRECT_URI = "https://nmt-rsvp.netlify.app/api/kingschat/callback"
 
 const SCOPES = ["conference_calls"];
