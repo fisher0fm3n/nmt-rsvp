@@ -572,10 +572,9 @@ export default function MenuSelectionPage() {
                         } ${!canChooseContinental ? "opacity-60 cursor-not-allowed" : ""}`}
                       >
                         <p className="text-xs font-semibold tracking-[0.18em] uppercase text-amber-900">CONTINENTAL</p>
-                        <p className="mt-2 text-sm text-neutral-800">Soup, Appetizers, Main, Dessert.</p>
                         <p className="mt-3 text-[12px] text-neutral-600">
                           {canChooseContinental
-                            ? "Local items will be hidden."
+                            ? ""
                             : "Fully booked — please choose Local."}
                         </p>
                       </button>
@@ -592,8 +591,6 @@ export default function MenuSelectionPage() {
                         }`}
                       >
                         <p className="text-xs font-semibold tracking-[0.18em] uppercase text-amber-900">LOCAL</p>
-                        <p className="mt-2 text-sm text-neutral-800">Starter, Salad, Main, Dessert, Snacks.</p>
-                        <p className="mt-3 text-[12px] text-neutral-600">Continental items will be hidden.</p>
                       </button>
                     </div>
                   </div>
